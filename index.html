@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HARMONIE Temperature Map</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin: 20px; background: #f0f0f0; }
+        h1 { color: #333; }
+        img { max-width: 100%; height: auto; border: 2px solid #333; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+        .footer { margin-top: 30px; color: #666; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <h1>Latest HARMONIE 2m Temperature (°C)</h1>
+    <img src="map.png" alt="Latest temperature map">
+    <div class="footer">
+        <p>Updated automatically every 3 hours via GitHub Actions</p>
+        <p>Data source: Finnish Meteorological Institute (FMI) open data</p>
+    </div>
+
+    <script>
+        // Optional: auto-refresh page every 30 minutes
+        setTimeout(() => location.reload(), 30 * 60 * 1000);
+    </script>
+</body>
+</html>
