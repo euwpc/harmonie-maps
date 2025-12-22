@@ -43,13 +43,14 @@ if not origintimes:
 latest_origintime = max(origintimes)
 print(f"Latest model run (origintime): {latest_origintime}")
 
-# --- Step 2: Download using your exact original URL (defaults to latest run) ---
+# --- Step 2: Download using your original URL + projection for standard lat/lon ---
 download_url = (
     "https://opendata.fmi.fi/download?"
     "producer=harmonie_scandinavia_surface&"
     "param=temperature&"
     "format=netcdf&"
-    "bbox=19,56,30,61"
+    "bbox=19,56,30,61&"
+    "projection=EPSG:4326"  # Add this for WGS84 lat/lon grid
 )
 
 print(f"Downloading from: {download_url}")
