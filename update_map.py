@@ -43,19 +43,17 @@ if not origintimes:
 latest_origintime = max(origintimes)
 print(f"Latest model run (origintime): {latest_origintime}")
 
-# --- Step 2: Build the download URL exactly like your original (defaults to latest run) ---
-# Your original URL (with lowercase 'temperature' and no extra params)
+# --- Step 2: Download using your exact original URL (defaults to latest run) ---
 download_url = (
     "https://opendata.fmi.fi/download?"
     "producer=harmonie_scandinavia_surface&"
-    "param=temperature&"  # lowercase as in your original
+    "param=temperature&"
     "format=netcdf&"
     "bbox=19,56,30,61"
-    # No origintime/starttime/timesteps/levels/projection – let it default to latest full run
 )
 
 print(f"Downloading from: {download_url}")
-response = requests.get(download_url, timeout=300)  # Longer timeout for larger file
+response = requests.get(download_url, timeout=300)
 response.raise_for_status()
 
 nc_path = "harmonie.nc"
@@ -69,16 +67,8 @@ print(f"Downloaded NetCDF ({file_size_mb:.1f} MB)")
 ds = xr.open_dataset(nc_path)
 print("Available variables:", list(ds.data_vars))
 
-# Temperature is usually 'temperature' (lowercase) in the NetCDF from this producer
-if 'temperature' in ds:
-    temp_k = ds['temperature']
-elif 'Temperature' in ds:
-    temp_k = ds['Temperature']
-elif 't2m' in ds:
-    temp_k = ds['t2m']
-else:
-    raise Exception("Temperature variable not found")
-
+# The temperature variable is 'air_temperature_4' (as shown in logs)
+temp_k = ds['air_temperature_4']
 temp_c = temp_k - 273.15
 
 # --- Step 4: Load your custom color ramp from the .qml file ---
