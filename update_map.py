@@ -7,6 +7,7 @@ from matplotlib.colors import ListedColormap, Normalize
 import matplotlib
 import datetime
 import os
+import glob
 from PIL import Image
 
 matplotlib.use('Agg')
@@ -122,4 +123,12 @@ for i in range(len(temp_c.time)):
 
 frames[0].save("animation.gif", save_all=True, append_images=frames[1:], duration=500, loop=0)
 
-print("All maps + temperature animation generated")
+# --- Cleanup: Remove large temporary files and frames ---
+if os.path.exists("harmonie.nc"):
+    os.remove("harmonie.nc")
+    print("Removed large harmonie.nc file")
+
+for frame_file in glob.glob("frame_*.png"):
+    os.remove(frame_file)
+
+print("All maps + temperature animation generated and cleanup complete")
