@@ -32,6 +32,10 @@
             cursor: pointer;
         }
         .speed-btn.active { background: #0066cc; }
+        #anim-gif-container {
+            position: relative;
+            display: inline-block;
+        }
         .footer { margin: 50px 0; color: #666; font-size: 0.9em; }
     </style>
 </head>
@@ -46,10 +50,12 @@
         </a>
     </div>
 
-    <h2>Forecast Animation</h2>
+    <h2>Forecast Animation (all hours from latest run)</h2>
     
     <div class="section">
-        <img id="anim-gif" src="animation.gif" alt="HARMONIE Forecast Animation">
+        <div id="anim-gif-container">
+            <img id="anim-gif" src="animation.gif" alt="HARMONIE Forecast Animation">
+        </div>
         
         <div class="controls">
             <button id="play-pause">Pause</button>
@@ -79,15 +85,26 @@
         let currentSrc = gif.src;
         let isPaused = false;
 
-        // Play/Pause toggle
+        // Create transparent overlay for true pause
+        const overlay = document.createElement('div');
+        overlay.style.position = 'absolute';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.background = 'transparent';
+        overlay.style.display = 'none';
+        overlay.style.cursor = 'default';
+        document.getElementById('anim-gif-container').appendChild(overlay);
+
+        // Play/Pause toggle - true pause without restart
         playPauseBtn.addEventListener('click', () => {
             if (isPaused) {
-                gif.src = currentSrc;  // Reload to resume
+                overlay.style.display = 'none';
                 playPauseBtn.textContent = 'Pause';
                 isPaused = false;
             } else {
-                gif.src = '';  // Pause by removing src
-                gif.src = currentSrc;
+                overlay.style.display = 'block';
                 playPauseBtn.textContent = 'Play';
                 isPaused = true;
             }
@@ -96,26 +113,27 @@
         // Speed control
         speedBtns.forEach(btn => {
             btn.addEventListener('click', () => {
-                // Remove active class
                 speedBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 
                 const speed = btn.dataset.speed;
-                const baseSrc = currentSrc.split('?')[0];
-                gif.src = baseSrc + '?speed=' + speed + '&ts=' + new Date().getTime();
-                currentSrc = gif.src;
+                const baseSrc = 'animation.gif';
+                const newSrc = baseSrc + '?speed=' + speed + '&ts=' + new Date().getTime();
+                gif.src = newSrc;
+                currentSrc = newSrc;
                 
+                // Preserve pause state after speed change
                 if (isPaused) {
-                    gif.src = '';  // Force reload for speed change
-                    gif.src = currentSrc;
+                    overlay.style.display = 'block';
                 }
             });
         });
 
-        // Cache-busting on load
+        // Initial load with cache-bust
         window.onload = () => {
-            gif.src = 'animation.gif?ts=' + new Date().getTime();
-            currentSrc = gif.src;
+            const initialSrc = 'animation.gif?ts=' + new Date().getTime();
+            gif.src = initialSrc;
+            currentSrc = initialSrc;
         };
     </script>
 </body>
