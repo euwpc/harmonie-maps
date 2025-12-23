@@ -67,7 +67,6 @@ windgust_ms = ds['wind_speed_of_gust_417']
 precip_mm = ds['precipitation_amount_353']
 
 # --- Step 4: Load custom colormaps from QML files ---
-# Make sure these files exist in your repo: cape.qml, mslp.qml, windgust.qml
 temp_cmap, temp_norm = parse_qml_colormap("temperature_color_table_high.qml", vmin=-40, vmax=50)
 
 cape_cmap, cape_norm = parse_qml_colormap("cape_color_table.qml", vmin=0, vmax=5000)
@@ -116,15 +115,22 @@ for view_key, view_conf in views.items():
         # Analysis map
         data = get_analysis(conf['var'])
         
-        # Crop data to current view extent for accurate min/max
+        # Crop to current view for accurate min/max (with safe fallback)
         lon_min, lon_max, lat_min, lat_max = extent
-        data_cropped = data.sel(
-            lon=slice(lon_min, lon_max),
-            lat=slice(lat_max, lat_min)  # lat decreases northward
-        )
-        
-        min_val = float(data_cropped.min())
-        max_val = float(data_cropped.max())
+        try:
+            data_cropped = data.sel(
+                lon=slice(lon_min, lon_max),
+                lat=slice(lat_max, lat_min),
+                method='nearest'
+            )
+            if data_cropped.size == 0:
+                raise ValueError("Empty crop")
+            min_val = float(data_cropped.min())
+            max_val = float(data_cropped.max())
+        except:
+            # Fallback to full data if cropping fails
+            min_val = float(data.min())
+            max_val = float(data.max())
         
         fig = plt.figure(figsize=(14 if view_key == 'wide' else 12, 10))
         ax = plt.axes(projection=ccrs.PlateCarree())
