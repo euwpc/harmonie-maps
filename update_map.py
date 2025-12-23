@@ -130,12 +130,16 @@ for view_key, view_conf in views.items():
         plt.savefig(f"{var_key}{suffix}.png", dpi=200, bbox_inches='tight')
         plt.close()
 
-        # Animation
+        # Animation with 1h steps up to +48h, then 3h steps after
         frames = []
         time_dim = 'time' if 'time' in conf['var'].dims else 'time_h'
         time_values = ds[time_dim].values
         
         for i in range(len(time_values)):
+            # Skip frames after +48h that are not on 3-hour steps
+            if i >= 48 and (i - 48) % 3 != 0:
+                continue
+
             fig = plt.figure(figsize=(12 if view_key == 'wide' else 10, 8))
             ax = plt.axes(projection=ccrs.PlateCarree())
             slice_data = conf['var'].isel(**{time_dim: i})
