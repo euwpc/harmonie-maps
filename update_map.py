@@ -42,20 +42,16 @@ with open(nc_path, "wb") as f:
 # --- Step 3: Load data ---
 ds = xr.open_dataset(nc_path)
 
-# Print variables for debugging (comment out after fixing)
-print("Available variables:", list(ds.data_vars))
-print("Dimensions:", list(ds.dims))
+# Detect time dimensions
+time_dim = 'time' if 'time' in ds.dims else 'time_h'
 
-# Variables (fixed based on error logs)
+# Variables
 temp_c = ds['air_temperature_4'] - 273.15
 dewpoint_c = ds['dew_point_temperature_10'] - 273.15
 pressure_hpa = ds['air_pressure_at_sea_level_1'] / 100
 cape = ds['atmosphere_specific_convective_available_potential_energy_59']
 windgust_ms = ds['wind_speed_of_gust_417']
 precip_mm = ds['precipitation_amount_353']
-
-# Determine time dim name (usually 'time' or 'time_h')
-time_dim = 'time' if 'time' in ds.dims else 'time_h'
 
 # --- Step 4: High-res temperature colormap ---
 tree = ET.parse("temperature_color_table_high.qml")
