@@ -6,110 +6,120 @@
     <title>HARMONIE Forecast Maps</title>
     <style>
         body { 
-            font-family: Arial, sans-serif; 
+            font-family: 'Segoe UI', Arial, sans-serif; 
             text-align: center; 
-            margin: 20px; 
-            background: #f0f0f0; 
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(to bottom, #e6f2ff, #f0f8ff);
+            color: #333;
+            min-height: 100vh;
         }
-        h1, h2 { color: #333; }
+        h1, h2 { 
+            color: #1e3a8a; 
+            margin-bottom: 10px;
+        }
+        h1 { font-size: 2em; }
+        h2 { font-size: 1.6em; }
         img { 
             max-width: 100%; 
             height: auto; 
-            border: 2px solid #333; 
-            border-radius: 8px; 
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2); 
-            margin: 20px 0; 
+            border: 3px solid #1e40af;
+            border-radius: 12px; 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15); 
+            margin: 30px 0; 
         }
         .download-btn {
             display: inline-block;
-            margin: 10px;
-            padding: 12px 24px;
-            background: #0066cc;
+            margin: 15px;
+            padding: 14px 30px;
+            background: #1e40af;
             color: white;
             text-decoration: none;
             font-weight: bold;
-            border-radius: 6px;
-            transition: background 0.3s;
+            font-size: 1.1em;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(30,64,175,0.3);
         }
-        .download-btn:hover { background: #0050a0; }
-        .section { margin: 40px 0; }
-        .controls { margin: 20px 0; }
-        .speed-btn {
-            padding: 8px 16px;
-            margin: 0 5px;
-            background: #444;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
+        .download-btn:hover { 
+            background: #1e3a8a; 
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(30,64,175,0.4);
         }
-        .speed-btn.active { background: #0066cc; }
-        #anim-gif-container {
-            position: relative;
-            display: inline-block;
+        .section { 
+            margin: 60px 0; 
+            padding: 20px;
+            background: rgba(255,255,255,0.7);
+            border-radius: 16px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
         }
         select { 
-            padding: 10px; 
-            font-size: 1.1em; 
-            margin: 20px; 
-            border-radius: 6px; 
-            background: white;
-            border: 1px solid #ccc;
-        }
-        .footer { 
-            margin: 50px 0; 
-            color: #666; 
-            font-size: 0.9em; 
-        }
-        /* Timeline Slider Style */
-        .timeline-container {
+            padding: 14px; 
+            font-size: 1.2em; 
             margin: 30px auto;
+            display: block;
+            border-radius: 10px; 
+            background: white;
+            border: 2px solid #1e40af;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
             width: 80%;
-            max-width: 900px;
-            background: #1e2a38;
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            max-width: 500px;
+        }
+        /* Timeline Slider - Dark modern theme */
+        .timeline-container {
+            margin: 40px auto;
+            width: 85%;
+            max-width: 1000px;
+            background: #0f172a;
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
         }
         .timeline-slider {
             -webkit-appearance: none;
             width: 100%;
-            height: 8px;
-            border-radius: 5px;
-            background: #2c3e50;
+            height: 10px;
+            border-radius: 8px;
+            background: #1e293b;
             outline: none;
-            margin: 20px 0;
+            margin: 30px 0;
         }
         .timeline-slider::-webkit-slider-thumb {
             -webkit-appearance: none;
-            appearance: none;
-            width: 24px;
-            height: 24px;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
-            background: #3498db;
+            background: #60a5fa;
             cursor: pointer;
-            box-shadow: 0 0 10px rgba(52,152,219,0.8);
+            box-shadow: 0 0 15px rgba(96,165,250,0.8);
         }
         .timeline-slider::-moz-range-thumb {
-            width: 24px;
-            height: 24px;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
-            background: #3498db;
+            background: #60a5fa;
             cursor: pointer;
             border: none;
-            box-shadow: 0 0 10px rgba(52,152,219,0.8);
+            box-shadow: 0 0 15px rgba(96,165,250,0.8);
         }
         .timeline-labels {
             display: flex;
             justify-content: space-between;
-            color: #bdc3c7;
-            font-size: 0.9em;
-            margin-top: 8px;
+            color: #94a3b8;
+            font-size: 1em;
+            margin-top: 10px;
+            font-weight: 500;
         }
         #current-valid-time {
-            color: #ecf0f1;
-            font-size: 1.2em;
-            margin: 10px 0;
+            color: #e0f2fe;
+            font-size: 1.5em;
+            margin: 15px 0;
+            font-weight: 600;
+        }
+        .footer { 
+            margin: 80px 0 40px; 
+            color: #64748b; 
+            font-size: 0.95em; 
         }
     </style>
 </head>
@@ -143,9 +153,7 @@
     </select>
 
     <div class="section">
-        <div id="anim-gif-container">
-            <img id="anim-gif" src="temperature_animation.gif" alt="Forecast Animation">
-        </div>
+        <img id="anim-gif" src="temperature_animation.gif" alt="Forecast Animation">
 
         <div class="timeline-container">
             <div id="current-valid-time">Valid: Loading...</div>
@@ -153,15 +161,6 @@
             <div class="timeline-labels" id="timeline-labels">
                 <!-- Filled dynamically by JavaScript -->
             </div>
-        </div>
-
-        <div class="controls">
-            <button id="play-pause">Pause</button>
-            <span>Speed:</span>
-            <button class="speed-btn" data-speed="0.5">0.5x</button>
-            <button class="speed-btn active" data-speed="1">1x</button>
-            <button class="speed-btn" data-speed="2">2x</button>
-            <button class="speed-btn" data-speed="4">4x</button>
         </div>
         
         <br>
@@ -228,7 +227,7 @@
             const runDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), runHour));
 
             const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-            for (let i = 0; i < 7; i++) {  // 7 labels for better coverage
+            for (let i = 0; i < 7; i++) {
                 const date = new Date(runDate);
                 date.setUTCDate(date.getUTCDate() + i);
                 const dayName = days[date.getUTCDay()];
@@ -268,45 +267,6 @@
             slider.value = 0;
             updateValidTime(0);
             updateTimelineLabels();
-        });
-
-        // Pause/Play + Speed
-        const playPauseBtn = document.getElementById('play-pause');
-        const speedBtns = document.querySelectorAll('.speed-btn');
-        let isPaused = false;
-
-        const overlay = document.createElement('div');
-        overlay.style.position = 'absolute';
-        overlay.style.top = '0';
-        overlay.style.left = '0';
-        overlay.style.width = '100%';
-        overlay.style.height = '100%';
-        overlay.style.background = 'transparent';
-        overlay.style.display = 'none';
-        overlay.style.cursor = 'default';
-        document.getElementById('anim-gif-container').appendChild(overlay);
-
-        playPauseBtn.addEventListener('click', () => {
-            if (isPaused) {
-                overlay.style.display = 'none';
-                playPauseBtn.textContent = 'Pause';
-                isPaused = false;
-            } else {
-                overlay.style.display = 'block';
-                playPauseBtn.textContent = 'Play';
-                isPaused = true;
-            }
-        });
-
-        speedBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                speedBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                const speed = btn.dataset.speed;
-                const val = animSelect.value;
-                animGif.src = animFiles[val] + '?speed=' + speed + '&ts=' + new Date().getTime();
-                if (isPaused) overlay.style.display = 'block';
-            });
         });
 
         // Initial load
