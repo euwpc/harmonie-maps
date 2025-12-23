@@ -28,7 +28,7 @@ run_time_str = datetime.datetime.strptime(latest_origintime, "%Y-%m-%dT%H:%M:%SZ
 download_url = (
     "https://opendata.fmi.fi/download?"
     "producer=harmonie_scandinavia_surface&"
-    "param=temperature,Dewpoint,Pressure,CAPE,WindGust,Precipitation1h&"  # WindGust and Precipitation1h
+    "param=temperature,Dewpoint,Pressure,CAPE,WindGust,Precipitation1h&"
     "format=netcdf&"
     "bbox=19,56,30,61&"
     "projection=EPSG:4326"
@@ -39,14 +39,14 @@ nc_path = "harmonie.nc"
 with open(nc_path, "wb") as f:
     f.write(response.content)
 
-# --- Step 3: Load data ---
+# --- Step 3: Load data (fixed variable names) ---
 ds = xr.open_dataset(nc_path)
 temp_c = ds['air_temperature_4'] - 273.15
 dewpoint_c = ds['dew_point_temperature_10'] - 273.15
 pressure_hpa = ds['air_pressure_at_sea_level_1'] / 100
 cape = ds['atmosphere_specific_convective_available_potential_energy_59']
-windgust_ms = ds['wind_speed_of_gust_417']  # Fixed variable name for WindGust
-precip_mm = ds['precipitation_amount_13']  # 1h accumulation in mm (kg/m² = mm)
+windgust_ms = ds['wind_speed_of_gust_417']  # Fixed for WindGust
+precip_mm = ds['precipitation_amount_353']  # Fixed for Precipitation1h
 
 # --- Step 4: High-res temperature colormap ---
 tree = ET.parse("temperature_color_table_high.qml")
@@ -78,7 +78,7 @@ windgust_cmap = plt.cm.plasma
 windgust_norm = Normalize(vmin=0, vmax=25)
 
 precip_cmap = plt.cm.Blues
-precip_norm = LogNorm(vmin=0.1, vmax=20)  # For better visibility of light precipitation
+precip_norm = LogNorm(vmin=0.1, vmax=20)
 
 # --- Step 5: Generate analysis maps ---
 variables = {
