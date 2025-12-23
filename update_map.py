@@ -39,14 +39,23 @@ nc_path = "harmonie.nc"
 with open(nc_path, "wb") as f:
     f.write(response.content)
 
-# --- Step 3: Load data (fixed variable names) ---
+# --- Step 3: Load data ---
 ds = xr.open_dataset(nc_path)
+
+# Print variables for debugging (comment out after fixing)
+print("Available variables:", list(ds.data_vars))
+print("Dimensions:", list(ds.dims))
+
+# Variables (fixed based on error logs)
 temp_c = ds['air_temperature_4'] - 273.15
 dewpoint_c = ds['dew_point_temperature_10'] - 273.15
 pressure_hpa = ds['air_pressure_at_sea_level_1'] / 100
 cape = ds['atmosphere_specific_convective_available_potential_energy_59']
-windgust_ms = ds['wind_speed_of_gust_417']  # Fixed for WindGust
-precip_mm = ds['precipitation_amount_353']  # Fixed for Precipitation1h
+windgust_ms = ds['wind_speed_of_gust_417']
+precip_mm = ds['precipitation_amount_353']
+
+# Determine time dim name (usually 'time' or 'time_h')
+time_dim = 'time' if 'time' in ds.dims else 'time_h'
 
 # --- Step 4: High-res temperature colormap ---
 tree = ET.parse("temperature_color_table_high.qml")
@@ -64,7 +73,7 @@ temp_colors = [i[1] for i in items]
 temp_cmap = ListedColormap(temp_colors)
 temp_norm = Normalize(vmin=-40, vmax=50)
 
-# Colormaps for other variables
+# Colormaps for others
 dewpoint_cmap = temp_cmap
 dewpoint_norm = Normalize(vmin=-40, vmax=30)
 
@@ -82,12 +91,12 @@ precip_norm = LogNorm(vmin=0.1, vmax=20)
 
 # --- Step 5: Generate analysis maps ---
 variables = {
-    'temperature': {'data': temp_c.isel(time=0), 'cmap': temp_cmap, 'norm': temp_norm, 'unit': '°C', 'title': '2m Temperature (°C)', 'levels': range(-40, 51, 2), 'file': 'temperature.png'},
-    'dewpoint':    {'data': dewpoint_c.isel(time=0), 'cmap': dewpoint_cmap, 'norm': dewpoint_norm, 'unit': '°C', 'title': '2m Dew Point (°C)', 'levels': range(-40, 31, 2), 'file': 'dewpoint.png'},
-    'pressure':    {'data': pressure_hpa.isel(time=0), 'cmap': pressure_cmap, 'norm': pressure_norm, 'unit': 'hPa', 'title': 'MSLP (hPa)', 'levels': range(950, 1051, 4), 'file': 'pressure.png'},
-    'cape':        {'data': cape.isel(time=0), 'cmap': cape_cmap, 'norm': cape_norm, 'unit': 'J/kg', 'title': 'CAPE (J/kg)', 'levels': range(0, 2001, 200), 'file': 'cape.png'},
-    'windgust':    {'data': windgust_ms.isel(time=0), 'cmap': windgust_cmap, 'norm': windgust_norm, 'unit': 'm/s', 'title': 'Wind Gust (m/s)', 'levels': range(0, 26, 2), 'file': 'windgust.png'},
-    'precip':      {'data': precip_mm.isel(time=0), 'cmap': precip_cmap, 'norm': precip_norm, 'unit': 'mm/h', 'title': 'Precipitation (1h)', 'levels': [0.1, 0.5, 1, 2, 5, 10, 20], 'file': 'precip.png'}
+    'temperature': {'data': temp_c.isel(**{time_dim: 0}), 'cmap': temp_cmap, 'norm': temp_norm, 'unit': '°C', 'title': '2m Temperature (°C)', 'levels': range(-40, 51, 2), 'file': 'temperature.png'},
+    'dewpoint':    {'data': dewpoint_c.isel(**{time_dim: 0}), 'cmap': dewpoint_cmap, 'norm': dewpoint_norm, 'unit': '°C', 'title': '2m Dew Point (°C)', 'levels': range(-40, 31, 2), 'file': 'dewpoint.png'},
+    'pressure':    {'data': pressure_hpa.isel(**{time_dim: 0}), 'cmap': pressure_cmap, 'norm': pressure_norm, 'unit': 'hPa', 'title': 'MSLP (hPa)', 'levels': range(950, 1051, 4), 'file': 'pressure.png'},
+    'cape':        {'data': cape.isel(**{time_dim: 0}), 'cmap': cape_cmap, 'norm': cape_norm, 'unit': 'J/kg', 'title': 'CAPE (J/kg)', 'levels': range(0, 2001, 200), 'file': 'cape.png'},
+    'windgust':    {'data': windgust_ms.isel(**{time_dim: 0}), 'cmap': windgust_cmap, 'norm': windgust_norm, 'unit': 'm/s', 'title': 'Wind Gust (m/s)', 'levels': range(0, 26, 2), 'file': 'windgust.png'},
+    'precip':      {'data': precip_mm.isel(**{time_dim: 0}), 'cmap': precip_cmap, 'norm': precip_norm, 'unit': 'mm/h', 'title': 'Precipitation (1h)', 'levels': [0.1, 0.5, 1, 2, 5, 10, 20], 'file': 'precip.png'}
 }
 
 for key, conf in variables.items():
@@ -111,10 +120,10 @@ for key, conf in variables.items():
 
 # --- Step 6: Temperature animation ---
 frames = []
-for i in range(len(temp_c.time)):
+for i in range(len(ds[time_dim])):
     fig = plt.figure(figsize=(10, 8))
     ax = plt.axes(projection=ccrs.PlateCarree())
-    temp_slice = temp_c.isel(time=i)
+    temp_slice = temp_c.isel(**{time_dim: i})
     hour_offset = i
 
     temp_slice.plot.contourf(ax=ax, transform=ccrs.PlateCarree(), cmap=temp_cmap, norm=temp_norm, levels=100)
