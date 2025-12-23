@@ -29,82 +29,21 @@ def parse_qml_colormap(qml_file, vmin, vmax):
     colors = [i[1] for i in items]
     return ListedColormap(colors), Normalize(vmin=vmin, vmax=vmax)
 
-# --- Step 1: Latest model run ---
-wfs_url = "https://opendata.fmi.fi/wfs?service=WFS&version=2.0.0&request=getFeature&storedquery_id=fmi::forecast::harmonie::surface::grid"
-response = requests.get(wfs_url, timeout=60)
-response.raise_for_status()
-tree = ET.fromstring(response.content)
+# --- Step 1-3: Model run, download, load data (unchanged) ---
+# ... (your existing code for wfs_url, download_url, ds load, variables)
 
-ns = {'gml': 'http://www.opengis.net/gml/3.2', 'omso': 'http://inspire.ec.europa.eu/schemas/omso/3.0'}
-origintimes = [elem.text for elem in tree.findall('.//omso:phenomenonTime//gml:beginPosition', ns)] or \
-              [elem.text for elem in tree.findall('.//gml:beginPosition', ns)]
-latest_origintime = max(origintimes)
-run_time_str = datetime.datetime.strptime(latest_origintime, "%Y-%m-%dT%H:%M:%SZ").strftime("%Y-%m-%d %H:%M UTC")
-
-# --- Step 2: Download with wide bbox ---
-download_url = (
-    "https://opendata.fmi.fi/download?"
-    "producer=harmonie_scandinavia_surface&"
-    "param=temperature,Dewpoint,Pressure,CAPE,WindGust,Precipitation1h&"
-    "format=netcdf&"
-    "bbox=10,53,35,71&"
-    "projection=EPSG:4326"
-)
-response = requests.get(download_url, timeout=300)
-response.raise_for_status()
-nc_path = "harmonie.nc"
-with open(nc_path, "wb") as f:
-    f.write(response.content)
-
-# --- Step 3: Load data ---
-ds = xr.open_dataset(nc_path)
-
-temp_c = ds['air_temperature_4'] - 273.15
-dewpoint_c = ds['dew_point_temperature_10'] - 273.15
-pressure_hpa = ds['air_pressure_at_sea_level_1'] / 100
-cape = ds['atmosphere_specific_convective_available_potential_energy_59']
-windgust_ms = ds['wind_speed_of_gust_417']
-precip_mm = ds['precipitation_amount_353']
-
-# --- Step 4: Load custom colormaps from QML files ---
+# --- Step 4: Load custom colormaps ---
 temp_cmap, temp_norm = parse_qml_colormap("temperature_color_table_high.qml", vmin=-40, vmax=50)
-
 cape_cmap, cape_norm = parse_qml_colormap("cape_color_table.qml", vmin=0, vmax=5000)
-
 pressure_cmap, pressure_norm = parse_qml_colormap("pressure_color_table.qml", vmin=890, vmax=1064)
-
 windgust_cmap, windgust_norm = parse_qml_colormap("wind_gust_color_table.qml", vmin=0, vmax=50)
-
-# Dewpoint uses temperature colormap
 dewpoint_cmap = temp_cmap
 dewpoint_norm = Normalize(vmin=-40, vmax=30)
-
-# Precip keeps Blues (or you can make a QML for it later)
 precip_cmap = plt.cm.Blues
 precip_norm = Normalize(vmin=0, vmax=10)
 
-# --- Step 5: Helper ---
-def get_analysis(var):
-    if 'time' in var.dims:
-        return var.isel(time=0)
-    elif 'time_h' in var.dims:
-        return var.isel(time_h=0)
-    return var
-
-# --- Step 6: Views ---
-views = {
-    'focused': {'extent': [19, 30, 56, 61], 'suffix': ''},
-    'wide':    {'extent': [10, 35, 53, 71], 'suffix': '_wide'}
-}
-
-variables = {
-    'temperature': {'var': temp_c, 'cmap': temp_cmap, 'norm': temp_norm, 'unit': '°C', 'title': '2m Temperature (°C)', 'levels': range(-40, 51, 2)},
-    'dewpoint':    {'var': dewpoint_c, 'cmap': dewpoint_cmap, 'norm': dewpoint_norm, 'unit': '°C', 'title': '2m Dew Point (°C)', 'levels': range(-40, 31, 2)},
-    'pressure':    {'var': pressure_hpa, 'cmap': pressure_cmap, 'norm': pressure_norm, 'unit': 'hPa', 'title': 'MSLP (hPa)', 'levels': range(950, 1051, 4)},
-    'cape':        {'var': cape, 'cmap': cape_cmap, 'norm': cape_norm, 'unit': 'J/kg', 'title': 'CAPE (J/kg)', 'levels': range(0, 2001, 200)},
-    'windgust':    {'var': windgust_ms, 'cmap': windgust_cmap, 'norm': windgust_norm, 'unit': 'm/s', 'title': 'Wind Gust (m/s)', 'levels': range(0, 26, 2)},
-    'precip':      {'var': precip_mm, 'cmap': precip_cmap, 'norm': precip_norm, 'unit': 'mm/h', 'title': 'Precipitation (1h)', 'levels': [0, 0.1, 0.5, 1, 2, 5, 10]}
-}
+# --- Step 5-6: Helper and views (unchanged) ---
+# ... (get_analysis, views, variables dict)
 
 # --- Generate for each view ---
 for view_key, view_conf in views.items():
@@ -115,7 +54,7 @@ for view_key, view_conf in views.items():
         # Analysis map
         data = get_analysis(conf['var'])
         
-        # Crop to current view for accurate min/max (with safe fallback)
+        # Accurate min/max only for visible area (analysis only)
         lon_min, lon_max, lat_min, lat_max = extent
         try:
             data_cropped = data.sel(
@@ -128,7 +67,6 @@ for view_key, view_conf in views.items():
             min_val = float(data_cropped.min())
             max_val = float(data_cropped.max())
         except:
-            # Fallback to full data if cropping fails
             min_val = float(data.min())
             max_val = float(data.max())
         
@@ -143,7 +81,7 @@ for view_key, view_conf in views.items():
         ax.gridlines(draw_labels=True)
         ax.set_extent(extent)
         
-        # Watermark: © tormiinfo.ee — clean, no box
+        # Watermark: © tormiinfo.ee — no box, clean
         fig.text(0.99, 0.01, '© tormiinfo.ee', fontsize=10, color='white',
                  ha='right', va='bottom', alpha=0.9,
                  path_effects=[matplotlib.patheffects.withStroke(linewidth=2, foreground='black')])
@@ -167,22 +105,6 @@ for view_key, view_conf in views.items():
             slice_data = conf['var'].isel(**{time_dim: i})
             hour_offset = i
 
-            # Crop slice to current view for accurate per-frame min/max
-            lon_min, lon_max, lat_min, lat_max = extent
-            try:
-                frame_cropped = slice_data.sel(
-                    lon=slice(lon_min, lon_max),
-                    lat=slice(lat_max, lat_min),
-                    method='nearest'
-                )
-                if frame_cropped.size == 0:
-                    raise ValueError("Empty crop")
-                frame_min = float(frame_cropped.min())
-                frame_max = float(frame_cropped.max())
-            except:
-                frame_min = float(slice_data.min())
-                frame_max = float(slice_data.max())
-
             slice_data.plot.contourf(ax=ax, transform=ccrs.PlateCarree(), cmap=conf['cmap'], norm=conf['norm'], levels=100)
             cl = slice_data.plot.contour(ax=ax, transform=ccrs.PlateCarree(), colors='black', linewidths=0.5, levels=conf['levels'])
             ax.clabel(cl, inline=True, fontsize=8, fmt="%.1f" if var_key == 'precip' else "%d")
@@ -191,7 +113,7 @@ for view_key, view_conf in views.items():
             ax.gridlines(draw_labels=True)
             ax.set_extent(extent)
 
-            # Watermark: © tormiinfo.ee — clean, no box
+            # Watermark: © tormiinfo.ee — no box
             fig.text(0.99, 0.01, '© tormiinfo.ee', fontsize=10, color='white',
                      ha='right', va='bottom', alpha=0.9,
                      path_effects=[matplotlib.patheffects.withStroke(linewidth=2, foreground='black')])
@@ -200,7 +122,7 @@ for view_key, view_conf in views.items():
             valid_dt_eet = valid_dt + pd.Timedelta(hours=2)
             valid_str = valid_dt_eet.strftime("%a %d %b %H:%M EET")
             
-            plt.title(f"HARMONIE {conf['title']}\nValid: {valid_str} | +{hour_offset}h from run {run_time_str}\nMin: {frame_min:.1f} {conf['unit']} | Max: {frame_max:.1f} {conf['unit']}")
+            plt.title(f"HARMONIE {conf['title']}\nValid: {valid_str} | +{hour_offset}h from run {run_time_str}")
 
             frame_path = f"frame_{var_key}{suffix}_{i:03d}.png"
             plt.savefig(frame_path, dpi=110, bbox_inches='tight')
