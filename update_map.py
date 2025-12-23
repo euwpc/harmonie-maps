@@ -113,8 +113,10 @@ for view_key, view_conf in views.items():
     for var_key, conf in variables.items():
         # Analysis map
         data = get_analysis(conf['var'])
-        min_val = float(data.min())
-        max_val = float(data.max())
+# Crop to view extent before min/max
+data_cropped = data.sel(lat=slice(extent[3], extent[2]), lon=slice(extent[0], extent[1]))  # lat high to low
+min_val = float(data_cropped.min())
+max_val = float(data_cropped.max())
         
         fig = plt.figure(figsize=(14 if view_key == 'wide' else 12, 10))
         ax = plt.axes(projection=ccrs.PlateCarree())
