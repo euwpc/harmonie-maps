@@ -19,10 +19,19 @@
             border-radius: 6px;
             transition: background 0.3s;
         }
-        .download-btn:hover {
-            background: #0050a0;
-        }
+        .download-btn:hover { background: #0050a0; }
         .section { margin: 40px 0; }
+        .controls { margin: 20px 0; }
+        .speed-btn {
+            padding: 8px 16px;
+            margin: 0 5px;
+            background: #444;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .speed-btn.active { background: #0066cc; }
         .footer { margin: 50px 0; color: #666; font-size: 0.9em; }
     </style>
 </head>
@@ -30,17 +39,27 @@
     <h1>Latest HARMONIE 2m Temperature (°C) - Analysis</h1>
     
     <div class="section">
-        <img src="map.png?ts=<%= new Date().getTime() %>" alt="Latest Temperature Map" id="main-map">
+        <img src="map.png?ts=<%= new Date().getTime() %>" alt="Latest Temperature Map">
         <br>
         <a href="map.png" download="HARMONIE_temperature_analysis.png" class="download-btn">
             Download Map (PNG)
         </a>
     </div>
 
-    <h2>Forecast Animation (all hours from latest run)</h2>
+    <h2>Forecast Animation</h2>
     
     <div class="section">
-        <img src="animation.gif" alt="HARMONIE Forecast Animation">
+        <img id="anim-gif" src="animation.gif" alt="HARMONIE Forecast Animation">
+        
+        <div class="controls">
+            <button id="play-pause">Pause</button>
+            <span>Speed:</span>
+            <button class="speed-btn" data-speed="0.5">0.5x</button>
+            <button class="speed-btn active" data-speed="1">1x</button>
+            <button class="speed-btn" data-speed="2">2x</button>
+            <button class="speed-btn" data-speed="4">4x</button>
+        </div>
+        
         <br>
         <a href="animation.gif" download="HARMONIE_temperature_forecast.gif" class="download-btn">
             Download Animation (GIF)
@@ -50,7 +69,54 @@
     <div class="footer">
         <p>Updated automatically every 3 hours via GitHub Actions</p>
         <p>Data source: Finnish Meteorological Institute (FMI) open data</p>
-        <p>Contour labels every 2°C | Animation: 0.5s per forecast hour</p>
+        <p>Contour labels every 2°C on all frames</p>
     </div>
+
+    <script>
+        const gif = document.getElementById('anim-gif');
+        const playPauseBtn = document.getElementById('play-pause');
+        const speedBtns = document.querySelectorAll('.speed-btn');
+        let currentSrc = gif.src;
+        let isPaused = false;
+
+        // Play/Pause toggle
+        playPauseBtn.addEventListener('click', () => {
+            if (isPaused) {
+                gif.src = currentSrc;  // Reload to resume
+                playPauseBtn.textContent = 'Pause';
+                isPaused = false;
+            } else {
+                gif.src = '';  // Pause by removing src
+                gif.src = currentSrc;
+                playPauseBtn.textContent = 'Play';
+                isPaused = true;
+            }
+        });
+
+        // Speed control
+        speedBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Remove active class
+                speedBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                const speed = btn.dataset.speed;
+                const baseSrc = currentSrc.split('?')[0];
+                gif.src = baseSrc + '?speed=' + speed + '&ts=' + new Date().getTime();
+                currentSrc = gif.src;
+                
+                if (isPaused) {
+                    gif.src = '';  // Force reload for speed change
+                    gif.src = currentSrc;
+                }
+            });
+        });
+
+        // Cache-busting on load
+        window.onload = () => {
+            gif.src = 'animation.gif?ts=' + new Date().getTime();
+            currentSrc = gif.src;
+        };
+    </script>
 </body>
 </html>
