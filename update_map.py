@@ -25,13 +25,13 @@ origintimes = [elem.text for elem in tree.findall('.//omso:phenomenonTime//gml:b
 latest_origintime = max(origintimes)
 run_time_str = datetime.datetime.strptime(latest_origintime, "%Y-%m-%dT%H:%M:%SZ").strftime("%Y-%m-%d %H:%M UTC")
 
-# --- Step 2: Download all variables ---
+# --- Step 2: Download all variables with wide bbox ---
 download_url = (
     "https://opendata.fmi.fi/download?"
     "producer=harmonie_scandinavia_surface&"
     "param=temperature,Dewpoint,Pressure,CAPE,WindGust,Precipitation1h&"
     "format=netcdf&"
-    "bbox=19,56,30,61&"
+    "bbox=10,53,35,71&"  # Wide bbox covering the red circled area (Baltic Sea, southern Scandinavia, northern Poland/Germany)
     "projection=EPSG:4326"
 )
 response = requests.get(download_url, timeout=300)
@@ -50,7 +50,7 @@ cape = ds['atmosphere_specific_convective_available_potential_energy_59']
 windgust_ms = ds['wind_speed_of_gust_417']
 precip_mm = ds['precipitation_amount_353']
 
-# --- Step 4: Colormaps ---
+# --- Step 4: High-res temperature colormap ---
 tree = ET.parse("temperature_color_table_high.qml")
 root = tree.getroot()
 items = []
@@ -66,6 +66,7 @@ temp_colors = [i[1] for i in items]
 temp_cmap = ListedColormap(temp_colors)
 temp_norm = Normalize(vmin=-40, vmax=50)
 
+# Colormaps for other variables
 dewpoint_cmap = temp_cmap
 dewpoint_norm = Normalize(vmin=-40, vmax=30)
 
@@ -79,7 +80,7 @@ windgust_cmap = plt.cm.plasma
 windgust_norm = Normalize(vmin=0, vmax=25)
 
 precip_cmap = plt.cm.Blues
-precip_norm = Normalize(vmin=0, vmax=10)  # Linear norm for better visibility (0-10 mm/h)
+precip_norm = Normalize(vmin=0, vmax=10)  # Linear for better visibility
 
 # --- Step 5: Helper to get analysis slice ---
 def get_analysis(var):
@@ -89,76 +90,85 @@ def get_analysis(var):
         return var.isel(time_h=0)
     return var
 
-# --- Step 6: Generate analysis maps ---
-variables = {
-    'temperature': {'var': temp_c, 'cmap': temp_cmap, 'norm': temp_norm, 'unit': '°C', 'title': '2m Temperature (°C)', 'levels': range(-40, 51, 2), 'file': 'temperature.png', 'anim': 'temperature_animation.gif'},
-    'dewpoint':    {'var': dewpoint_c, 'cmap': dewpoint_cmap, 'norm': dewpoint_norm, 'unit': '°C', 'title': '2m Dew Point (°C)', 'levels': range(-40, 31, 2), 'file': 'dewpoint.png', 'anim': 'dewpoint_animation.gif'},
-    'pressure':    {'var': pressure_hpa, 'cmap': pressure_cmap, 'norm': pressure_norm, 'unit': 'hPa', 'title': 'MSLP (hPa)', 'levels': range(950, 1051, 4), 'file': 'pressure.png', 'anim': 'pressure_animation.gif'},
-    'cape':        {'var': cape, 'cmap': cape_cmap, 'norm': cape_norm, 'unit': 'J/kg', 'title': 'CAPE (J/kg)', 'levels': range(0, 2001, 200), 'file': 'cape.png', 'anim': 'cape_animation.gif'},
-    'windgust':    {'var': windgust_ms, 'cmap': windgust_cmap, 'norm': windgust_norm, 'unit': 'm/s', 'title': 'Wind Gust (m/s)', 'levels': range(0, 26, 2), 'file': 'windgust.png', 'anim': 'windgust_animation.gif'},
-    'precip':      {'var': precip_mm, 'cmap': precip_cmap, 'norm': precip_norm, 'unit': 'mm/h', 'title': 'Precipitation (1h)', 'levels': [0, 0.1, 0.5, 1, 2, 5, 10], 'file': 'precip.png', 'anim': 'precip_animation.gif'}
+# --- Step 6: Define two views ---
+views = {
+    'focused': {'extent': [19, 30, 56, 61], 'suffix': ''},  # Original focused view
+    'wide':    {'extent': [10, 35, 53, 71], 'suffix': '_wide'}  # Wide view covering the red circled area
 }
 
-for key, conf in variables.items():
-    # Analysis map
-    data = get_analysis(conf['var'])
-    min_val = float(data.min())
-    max_val = float(data.max())
-    
-    fig = plt.figure(figsize=(12, 10))
-    ax = plt.axes(projection=ccrs.PlateCarree())
-    data.plot.contourf(ax=ax, transform=ccrs.PlateCarree(), cmap=conf['cmap'], norm=conf['norm'], levels=100,
-                       cbar_kwargs={'label': conf['unit'], 'shrink': 0.8})
-    cl = data.plot.contour(ax=ax, transform=ccrs.PlateCarree(), colors='black', linewidths=0.5, levels=conf['levels'])
-    ax.clabel(cl, inline=True, fontsize=8, fmt="%.1f" if key == 'precip' else "%d")
-    
-    ax.coastlines(resolution='10m')
-    ax.gridlines(draw_labels=True)
-    ax.set_extent([19, 30, 56, 61])
-    plt.title(f"HARMONIE {conf['title']}\nModel run: {run_time_str} | Analysis\nMin: {min_val:.1f} {conf['unit']} | Max: {max_val:.1f} {conf['unit']}")
-    plt.savefig(conf['file'], dpi=200, bbox_inches='tight')
-    plt.close()
+variables = {
+    'temperature': {'var': temp_c, 'cmap': temp_cmap, 'norm': temp_norm, 'unit': '°C', 'title': '2m Temperature (°C)', 'levels': range(-40, 51, 2)},
+    'dewpoint':    {'var': dewpoint_c, 'cmap': dewpoint_cmap, 'norm': dewpoint_norm, 'unit': '°C', 'title': '2m Dew Point (°C)', 'levels': range(-40, 31, 2)},
+    'pressure':    {'var': pressure_hpa, 'cmap': pressure_cmap, 'norm': pressure_norm, 'unit': 'hPa', 'title': 'MSLP (hPa)', 'levels': range(950, 1051, 4)},
+    'cape':        {'var': cape, 'cmap': cape_cmap, 'norm': cape_norm, 'unit': 'J/kg', 'title': 'CAPE (J/kg)', 'levels': range(0, 2001, 200)},
+    'windgust':    {'var': windgust_ms, 'cmap': windgust_cmap, 'norm': windgust_norm, 'unit': 'm/s', 'title': 'Wind Gust (m/s)', 'levels': range(0, 26, 2)},
+    'precip':      {'var': precip_mm, 'cmap': precip_cmap, 'norm': precip_norm, 'unit': 'mm/h', 'title': 'Precipitation (1h)', 'levels': [0, 0.1, 0.5, 1, 2, 5, 10]}
+}
 
-    # Animation for this variable
-    frames = []
-    time_dim = 'time' if 'time' in conf['var'].dims else 'time_h'
-    time_values = ds[time_dim].values
-    
-    for i in range(len(time_values)):
-        fig = plt.figure(figsize=(10, 8))
+# --- Generate for each view ---
+for view_key, view_conf in views.items():
+    extent = view_conf['extent']
+    suffix = view_conf['suffix']
+
+    for var_key, conf in variables.items():
+        # Analysis map
+        data = get_analysis(conf['var'])
+        min_val = float(data.min())
+        max_val = float(data.max())
+        
+        fig = plt.figure(figsize=(14 if view_key == 'wide' else 12, 10))
         ax = plt.axes(projection=ccrs.PlateCarree())
-        slice_data = conf['var'].isel(**{time_dim: i})
-        hour_offset = i
-
-        slice_data.plot.contourf(ax=ax, transform=ccrs.PlateCarree(), cmap=conf['cmap'], norm=conf['norm'], levels=100)
-        cl = slice_data.plot.contour(ax=ax, transform=ccrs.PlateCarree(), colors='black', linewidths=0.5, levels=conf['levels'])
-        ax.clabel(cl, inline=True, fontsize=8, fmt="%.1f" if key == 'precip' else "%d")
-
+        data.plot.contourf(ax=ax, transform=ccrs.PlateCarree(), cmap=conf['cmap'], norm=conf['norm'], levels=100,
+                           cbar_kwargs={'label': conf['unit'], 'shrink': 0.8})
+        cl = data.plot.contour(ax=ax, transform=ccrs.PlateCarree(), colors='black', linewidths=0.5, levels=conf['levels'])
+        ax.clabel(cl, inline=True, fontsize=8, fmt="%.1f" if var_key == 'precip' else "%d")
+        
         ax.coastlines(resolution='10m')
         ax.gridlines(draw_labels=True)
-        ax.set_extent([19, 30, 56, 61])
-        
-        # Valid time in EET
-        valid_dt = pd.to_datetime(time_values[i])
-        valid_dt_eet = valid_dt + pd.Timedelta(hours=2)
-        valid_str = valid_dt_eet.strftime("%a %d %b %H:%M EET")
-        
-        plt.title(f"HARMONIE {conf['title']}\nValid: {valid_str} | +{hour_offset}h from run {run_time_str}")
-
-        frame_path = f"frame_{key}_{i:03d}.png"
-        plt.savefig(frame_path, dpi=150, bbox_inches='tight')
+        ax.set_extent(extent)
+        plt.title(f"HARMONIE {conf['title']}\nModel run: {run_time_str} | Analysis\nMin: {min_val:.1f} {conf['unit']} | Max: {max_val:.1f} {conf['unit']}")
+        plt.savefig(f"{var_key}{suffix}.png", dpi=200, bbox_inches='tight')
         plt.close()
-        frames.append(Image.open(frame_path))
 
-    frames[0].save(conf['anim'], save_all=True, append_images=frames[1:], duration=500, loop=0)
+        # Animation
+        frames = []
+        time_dim = 'time' if 'time' in conf['var'].dims else 'time_h'
+        time_values = ds[time_dim].values
+        
+        for i in range(len(time_values)):
+            fig = plt.figure(figsize=(12 if view_key == 'wide' else 10, 8))
+            ax = plt.axes(projection=ccrs.PlateCarree())
+            slice_data = conf['var'].isel(**{time_dim: i})
+            hour_offset = i
 
-    # Clean frames
-    for f in glob.glob(f"frame_{key}_*.png"):
-        os.remove(f)
+            slice_data.plot.contourf(ax=ax, transform=ccrs.PlateCarree(), cmap=conf['cmap'], norm=conf['norm'], levels=100)
+            cl = slice_data.plot.contour(ax=ax, transform=ccrs.PlateCarree(), colors='black', linewidths=0.5, levels=conf['levels'])
+            ax.clabel(cl, inline=True, fontsize=8, fmt="%.1f" if var_key == 'precip' else "%d")
+
+            ax.coastlines(resolution='10m')
+            ax.gridlines(draw_labels=True)
+            ax.set_extent(extent)
+            
+            valid_dt = pd.to_datetime(time_values[i])
+            valid_dt_eet = valid_dt + pd.Timedelta(hours=2)
+            valid_str = valid_dt_eet.strftime("%a %d %b %H:%M EET")
+            
+            plt.title(f"HARMONIE {conf['title']}\nValid: {valid_str} | +{hour_offset}h from run {run_time_str}")
+
+            frame_path = f"frame_{var_key}{suffix}_{i:03d}.png"
+            plt.savefig(frame_path, dpi=150, bbox_inches='tight')
+            plt.close()
+            frames.append(Image.open(frame_path))
+
+        frames[0].save(f"{var_key}{suffix}_animation.gif", save_all=True, append_images=frames[1:], duration=500, loop=0)
+
+        # Clean frames
+        for f in glob.glob(f"frame_{var_key}{suffix}_*.png"):
+            os.remove(f)
 
 # --- Cleanup large file ---
 if os.path.exists("harmonie.nc"):
     os.remove("harmonie.nc")
     print("Removed large harmonie.nc file")
 
-print("All analysis maps + animations for 6 variables generated and cleanup complete")
+print("All analysis maps + animations for focused and wide views generated and cleanup complete")
