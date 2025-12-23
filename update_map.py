@@ -130,41 +130,47 @@ for view_key, view_conf in views.items():
         plt.savefig(f"{var_key}{suffix}.png", dpi=200, bbox_inches='tight')
         plt.close()
 
-        # Animation
-        frames = []
-        time_dim = 'time' if 'time' in conf['var'].dims else 'time_h'
-        time_values = ds[time_dim].values
-        
-        for i in range(len(time_values)):
-            fig = plt.figure(figsize=(12 if view_key == 'wide' else 10, 8))
-            ax = plt.axes(projection=ccrs.PlateCarree())
-            slice_data = conf['var'].isel(**{time_dim: i})
-            hour_offset = i
+        # --- Animation for this variable (1h up to +48h, then 3h) ---
+frames = []
+time_dim = 'time' if 'time' in conf['var'].dims else 'time_h'
+time_values = ds[time_dim].values
+n_times = len(time_values)
 
-            slice_data.plot.contourf(ax=ax, transform=ccrs.PlateCarree(), cmap=conf['cmap'], norm=conf['norm'], levels=100)
-            cl = slice_data.plot.contour(ax=ax, transform=ccrs.PlateCarree(), colors='black', linewidths=0.5, levels=conf['levels'])
-            ax.clabel(cl, inline=True, fontsize=8, fmt="%.1f" if var_key == 'precip' else "%d")
+for i in range(n_times):
+    # 1-hour steps for first 48 hours (i < 48)
+    # 3-hour steps after +48h (i >= 48)
+    if i >= 48 and (i - 48) % 3 != 0:
+        continue  # Skip frames not on 3h step
 
-            ax.coastlines(resolution='10m')
-            ax.gridlines(draw_labels=True)
-            ax.set_extent(extent)
-            
-            valid_dt = pd.to_datetime(time_values[i])
-            valid_dt_eet = valid_dt + pd.Timedelta(hours=2)
-            valid_str = valid_dt_eet.strftime("%a %d %b %H:%M EET")
-            
-            plt.title(f"HARMONIE {conf['title']}\nValid: {valid_str} | +{hour_offset}h from run {run_time_str}")
+    fig = plt.figure(figsize=(9, 7))
+    ax = plt.axes(projection=ccrs.PlateCarree())
+    slice_data = conf['var'].isel(**{time_dim: i})
+    hour_offset = i
 
-            frame_path = f"frame_{var_key}{suffix}_{i:03d}.png"
-            plt.savefig(frame_path, dpi=110, bbox_inches='tight')
-            plt.close()
-            frames.append(Image.open(frame_path))
+    slice_data.plot.contourf(ax=ax, transform=ccrs.PlateCarree(), cmap=conf['cmap'], norm=conf['norm'], levels=100)
+    cl = slice_data.plot.contour(ax=ax, transform=ccrs.PlateCarree(), colors='black', linewidths=0.5, levels=conf['levels'])
+    ax.clabel(cl, inline=True, fontsize=8, fmt="%.1f" if var_key == 'precip' else "%d")
 
-        frames[0].save(f"{var_key}{suffix}_animation.gif", save_all=True, append_images=frames[1:], duration=500, loop=0)
+    ax.coastlines(resolution='10m')
+    ax.gridlines(draw_labels=True)
+    ax.set_extent(extent)
+    
+    valid_dt = pd.to_datetime(time_values[i])
+    valid_dt_eet = valid_dt + pd.Timedelta(hours=2)
+    valid_str = valid_dt_eet.strftime("%a %d %b %H:%M EET")
+    
+    plt.title(f"HARMONIE {conf['title']}\nValid: {valid_str} | +{hour_offset}h from run {run_time_str}")
 
-        # Clean frames
-        for f in glob.glob(f"frame_{var_key}{suffix}_*.png"):
-            os.remove(f)
+    frame_path = f"frame_{var_key}{suffix}_{i:03d}.png"
+    plt.savefig(frame_path, dpi=110, bbox_inches='tight')
+    plt.close()
+    frames.append(Image.open(frame_path))
+
+frames[0].save(f"{var_key}{suffix}_animation.gif", save_all=True, append_images=frames[1:], duration=500, loop=0)
+
+# Clean frames
+for f in glob.glob(f"frame_{var_key}{suffix}_*.png"):
+    os.remove(f)
 
 # --- Cleanup large file ---
 if os.path.exists("harmonie.nc"):
