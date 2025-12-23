@@ -25,13 +25,13 @@ origintimes = [elem.text for elem in tree.findall('.//omso:phenomenonTime//gml:b
 latest_origintime = max(origintimes)
 run_time_str = datetime.datetime.strptime(latest_origintime, "%Y-%m-%dT%H:%M:%SZ").strftime("%Y-%m-%d %H:%M UTC")
 
-# --- Step 2: Download all variables with wide bbox ---
+# --- Step 2: Download with wide bbox ---
 download_url = (
     "https://opendata.fmi.fi/download?"
     "producer=harmonie_scandinavia_surface&"
     "param=temperature,Dewpoint,Pressure,CAPE,WindGust,Precipitation1h&"
     "format=netcdf&"
-    "bbox=10,53,35,71&"  # Wide bbox covering the red circled area (Baltic Sea, southern Scandinavia, northern Poland/Germany)
+    "bbox=10,53,35,71&"
     "projection=EPSG:4326"
 )
 response = requests.get(download_url, timeout=300)
@@ -80,9 +80,9 @@ windgust_cmap = plt.cm.plasma
 windgust_norm = Normalize(vmin=0, vmax=25)
 
 precip_cmap = plt.cm.Blues
-precip_norm = Normalize(vmin=0, vmax=10)  # Linear for better visibility
+precip_norm = Normalize(vmin=0, vmax=10)
 
-# --- Step 5: Helper to get analysis slice ---
+# --- Step 5: Helper ---
 def get_analysis(var):
     if 'time' in var.dims:
         return var.isel(time=0)
@@ -90,10 +90,10 @@ def get_analysis(var):
         return var.isel(time_h=0)
     return var
 
-# --- Step 6: Define two views ---
+# --- Step 6: Views ---
 views = {
-    'focused': {'extent': [19, 30, 56, 61], 'suffix': ''},  # Original focused view
-    'wide':    {'extent': [10, 35, 53, 71], 'suffix': '_wide'}  # Wide view covering the red circled area
+    'focused': {'extent': [19, 30, 56, 61], 'suffix': ''},
+    'wide':    {'extent': [10, 35, 53, 71], 'suffix': '_wide'}
 }
 
 variables = {
@@ -113,10 +113,8 @@ for view_key, view_conf in views.items():
     for var_key, conf in variables.items():
         # Analysis map
         data = get_analysis(conf['var'])
-# Crop to view extent before min/max
-data_cropped = data.sel(lat=slice(extent[3], extent[2]), lon=slice(extent[0], extent[1]))  # lat high to low
-min_val = float(data_cropped.min())
-max_val = float(data_cropped.max())
+        min_val = float(data.min())
+        max_val = float(data.max())
         
         fig = plt.figure(figsize=(14 if view_key == 'wide' else 12, 10))
         ax = plt.axes(projection=ccrs.PlateCarree())
@@ -132,47 +130,41 @@ max_val = float(data_cropped.max())
         plt.savefig(f"{var_key}{suffix}.png", dpi=200, bbox_inches='tight')
         plt.close()
 
-        # --- Animation for this variable (1h up to +48h, then 3h) ---
-frames = []
-time_dim = 'time' if 'time' in conf['var'].dims else 'time_h'
-time_values = ds[time_dim].values
-n_times = len(time_values)
+        # Animation
+        frames = []
+        time_dim = 'time' if 'time' in conf['var'].dims else 'time_h'
+        time_values = ds[time_dim].values
+        
+        for i in range(len(time_values)):
+            fig = plt.figure(figsize=(12 if view_key == 'wide' else 10, 8))
+            ax = plt.axes(projection=ccrs.PlateCarree())
+            slice_data = conf['var'].isel(**{time_dim: i})
+            hour_offset = i
 
-for i in range(n_times):
-    # 1-hour steps for first 48 hours (i < 48)
-    # 3-hour steps after +48h (i >= 48)
-    if i >= 48 and (i - 48) % 3 != 0:
-        continue  # Skip frames not on 3h step
+            slice_data.plot.contourf(ax=ax, transform=ccrs.PlateCarree(), cmap=conf['cmap'], norm=conf['norm'], levels=100)
+            cl = slice_data.plot.contour(ax=ax, transform=ccrs.PlateCarree(), colors='black', linewidths=0.5, levels=conf['levels'])
+            ax.clabel(cl, inline=True, fontsize=8, fmt="%.1f" if var_key == 'precip' else "%d")
 
-    fig = plt.figure(figsize=(9, 7))
-    ax = plt.axes(projection=ccrs.PlateCarree())
-    slice_data = conf['var'].isel(**{time_dim: i})
-    hour_offset = i
+            ax.coastlines(resolution='10m')
+            ax.gridlines(draw_labels=True)
+            ax.set_extent(extent)
+            
+            valid_dt = pd.to_datetime(time_values[i])
+            valid_dt_eet = valid_dt + pd.Timedelta(hours=2)
+            valid_str = valid_dt_eet.strftime("%a %d %b %H:%M EET")
+            
+            plt.title(f"HARMONIE {conf['title']}\nValid: {valid_str} | +{hour_offset}h from run {run_time_str}")
 
-    slice_data.plot.contourf(ax=ax, transform=ccrs.PlateCarree(), cmap=conf['cmap'], norm=conf['norm'], levels=100)
-    cl = slice_data.plot.contour(ax=ax, transform=ccrs.PlateCarree(), colors='black', linewidths=0.5, levels=conf['levels'])
-    ax.clabel(cl, inline=True, fontsize=8, fmt="%.1f" if var_key == 'precip' else "%d")
+            frame_path = f"frame_{var_key}{suffix}_{i:03d}.png"
+            plt.savefig(frame_path, dpi=110, bbox_inches='tight')
+            plt.close()
+            frames.append(Image.open(frame_path))
 
-    ax.coastlines(resolution='10m')
-    ax.gridlines(draw_labels=True)
-    ax.set_extent(extent)
-    
-    valid_dt = pd.to_datetime(time_values[i])
-    valid_dt_eet = valid_dt + pd.Timedelta(hours=2)
-    valid_str = valid_dt_eet.strftime("%a %d %b %H:%M EET")
-    
-    plt.title(f"HARMONIE {conf['title']}\nValid: {valid_str} | +{hour_offset}h from run {run_time_str}")
+        frames[0].save(f"{var_key}{suffix}_animation.gif", save_all=True, append_images=frames[1:], duration=500, loop=0)
 
-    frame_path = f"frame_{var_key}{suffix}_{i:03d}.png"
-    plt.savefig(frame_path, dpi=110, bbox_inches='tight')
-    plt.close()
-    frames.append(Image.open(frame_path))
-
-frames[0].save(f"{var_key}{suffix}_animation.gif", save_all=True, append_images=frames[1:], duration=500, loop=0)
-
-# Clean frames
-for f in glob.glob(f"frame_{var_key}{suffix}_*.png"):
-    os.remove(f)
+        # Clean frames
+        for f in glob.glob(f"frame_{var_key}{suffix}_*.png"):
+            os.remove(f)
 
 # --- Cleanup large file ---
 if os.path.exists("harmonie.nc"):
