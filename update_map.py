@@ -28,7 +28,7 @@ run_time_str = datetime.datetime.strptime(latest_origintime, "%Y-%m-%dT%H:%M:%SZ
 download_url = (
     "https://opendata.fmi.fi/download?"
     "producer=harmonie_scandinavia_surface&"
-    "param=temperature,Dewpoint,Pressure,CAPE,WindGust,Precipitation1h&"  # Added WindGust and Precipitation1h
+    "param=temperature,Dewpoint,Pressure,CAPE,WindGust,Precipitation1h&"  # WindGust and Precipitation1h
     "format=netcdf&"
     "bbox=19,56,30,61&"
     "projection=EPSG:4326"
@@ -45,8 +45,8 @@ temp_c = ds['air_temperature_4'] - 273.15
 dewpoint_c = ds['dew_point_temperature_10'] - 273.15
 pressure_hpa = ds['air_pressure_at_sea_level_1'] / 100
 cape = ds['atmosphere_specific_convective_available_potential_energy_59']
-windgust_ms = ds['wind_gust_11']  # Wind gust in m/s
-precip_mm = ds['precipitation_amount_13']  # 1h accumulation in kg/m² = mm
+windgust_ms = ds['wind_speed_of_gust_417']  # Fixed variable name for WindGust
+precip_mm = ds['precipitation_amount_13']  # 1h accumulation in mm (kg/m² = mm)
 
 # --- Step 4: High-res temperature colormap ---
 tree = ET.parse("temperature_color_table_high.qml")
@@ -75,10 +75,10 @@ cape_cmap = plt.cm.YlOrRd
 cape_norm = Normalize(vmin=0, vmax=2000)
 
 windgust_cmap = plt.cm.plasma
-windgust_norm = Normalize(vmin=0, vmax=25)  # Typical gust range
+windgust_norm = Normalize(vmin=0, vmax=25)
 
 precip_cmap = plt.cm.Blues
-precip_norm = LogNorm(vmin=0.1, vmax=20)  # Log for better light rain visibility
+precip_norm = LogNorm(vmin=0.1, vmax=20)  # For better visibility of light precipitation
 
 # --- Step 5: Generate analysis maps ---
 variables = {
@@ -87,7 +87,7 @@ variables = {
     'pressure':    {'data': pressure_hpa.isel(time=0), 'cmap': pressure_cmap, 'norm': pressure_norm, 'unit': 'hPa', 'title': 'MSLP (hPa)', 'levels': range(950, 1051, 4), 'file': 'pressure.png'},
     'cape':        {'data': cape.isel(time=0), 'cmap': cape_cmap, 'norm': cape_norm, 'unit': 'J/kg', 'title': 'CAPE (J/kg)', 'levels': range(0, 2001, 200), 'file': 'cape.png'},
     'windgust':    {'data': windgust_ms.isel(time=0), 'cmap': windgust_cmap, 'norm': windgust_norm, 'unit': 'm/s', 'title': 'Wind Gust (m/s)', 'levels': range(0, 26, 2), 'file': 'windgust.png'},
-    'precip':      {'data': precip_mm.isel(time=0), 'cmap': precip_cmap, 'norm': precip_norm, 'unit': 'mm/h', 'title': 'Precipitation (1h accumulation)', 'levels': [0.1, 0.5, 1, 2, 5, 10, 20], 'file': 'precip.png'}
+    'precip':      {'data': precip_mm.isel(time=0), 'cmap': precip_cmap, 'norm': precip_norm, 'unit': 'mm/h', 'title': 'Precipitation (1h)', 'levels': [0.1, 0.5, 1, 2, 5, 10, 20], 'file': 'precip.png'}
 }
 
 for key, conf in variables.items():
@@ -100,7 +100,7 @@ for key, conf in variables.items():
     data.plot.contourf(ax=ax, transform=ccrs.PlateCarree(), cmap=conf['cmap'], norm=conf['norm'], levels=100,
                        cbar_kwargs={'label': conf['unit'], 'shrink': 0.8})
     cl = data.plot.contour(ax=ax, transform=ccrs.PlateCarree(), colors='black', linewidths=0.5, levels=conf['levels'])
-    ax.clabel(cl, inline=True, fontsize=8, fmt="%.1f" if key == 'precip' else "%d")
+    ax.clabel(cl, inline=True, fontsize=8, fmt="%.1f" if key in ['precip'] else "%d")
 
     ax.coastlines(resolution='10m')
     ax.gridlines(draw_labels=True)
