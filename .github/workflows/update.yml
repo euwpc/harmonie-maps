@@ -2,7 +2,7 @@ name: Update HARMONIE Map
 
 on:
   schedule:
-    - cron: '0 */3 * * *'  # Every 3 hours
+    - cron: '10 */3 * * *'  # Every 3 hours
   workflow_dispatch:     # Allows manual trigger
 
 jobs:
