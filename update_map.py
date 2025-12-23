@@ -115,8 +115,16 @@ for view_key, view_conf in views.items():
     for var_key, conf in variables.items():
         # Analysis map
         data = get_analysis(conf['var'])
-        min_val = float(data.min())
-        max_val = float(data.max())
+        
+        # Crop data to current view extent for accurate min/max
+        lon_min, lon_max, lat_min, lat_max = extent
+        data_cropped = data.sel(
+            lon=slice(lon_min, lon_max),
+            lat=slice(lat_max, lat_min)  # lat decreases northward
+        )
+        
+        min_val = float(data_cropped.min())
+        max_val = float(data_cropped.max())
         
         fig = plt.figure(figsize=(14 if view_key == 'wide' else 12, 10))
         ax = plt.axes(projection=ccrs.PlateCarree())
@@ -128,20 +136,22 @@ for view_key, view_conf in views.items():
         ax.coastlines(resolution='10m')
         ax.gridlines(draw_labels=True)
         ax.set_extent(extent)
+        
+        # Watermark in bottom-right
+        fig.text(0.98, 0.02, '© tormiinfo.ee', fontsize=12, color='white', alpha=0.9,
+                 ha='right', va='bottom',
+                 bbox=dict(facecolor='black', alpha=0.6, pad=5, edgecolor='none'))
+        
         plt.title(f"HARMONIE {conf['title']}\nModel run: {run_time_str} | Analysis\nMin: {min_val:.1f} {conf['unit']} | Max: {max_val:.1f} {conf['unit']}")
         plt.savefig(f"{var_key}{suffix}.png", dpi=200, bbox_inches='tight')
         plt.close()
 
-        # Animation (with your optimizations if you kept them)
+        # Animation
         frames = []
         time_dim = 'time' if 'time' in conf['var'].dims else 'time_h'
         time_values = ds[time_dim].values
         
         for i in range(len(time_values)):
-            # Optional: 1h up to +48h, then 3h — uncomment if you want
-            # if i >= 48 and (i - 48) % 3 != 0:
-            #     continue
-
             fig = plt.figure(figsize=(12 if view_key == 'wide' else 10, 8))
             ax = plt.axes(projection=ccrs.PlateCarree())
             slice_data = conf['var'].isel(**{time_dim: i})
@@ -154,6 +164,11 @@ for view_key, view_conf in views.items():
             ax.coastlines(resolution='10m')
             ax.gridlines(draw_labels=True)
             ax.set_extent(extent)
+
+            # Watermark in bottom-right
+            fig.text(0.98, 0.02, '© tormiinfo.ee', fontsize=12, color='white', alpha=0.9,
+                     ha='right', va='bottom',
+                     bbox=dict(facecolor='black', alpha=0.6, pad=5, edgecolor='none'))
             
             valid_dt = pd.to_datetime(time_values[i])
             valid_dt_eet = valid_dt + pd.Timedelta(hours=2)
