@@ -170,7 +170,7 @@ for view_key, view_conf in views.items():
             plt.title(f"HARMONIE {conf['title']}\nValid: {valid_str} | +{hour_offset}h from run {run_time_str}")
 
             frame_path = f"frame_{var_key}{suffix}_{i:03d}.png"
-            plt.savefig(frame_path, dpi=110, bbox_inches='tight')  # Lower DPI for faster saving
+            plt.savefig(frame_path, dpi=95, bbox_inches='tight')  # Lower DPI for faster saving
             plt.close()
             frame_paths.append(frame_path)
 
