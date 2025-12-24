@@ -75,7 +75,7 @@ pressure_cmap, pressure_norm = parse_qml_colormap("pressure_color_table.qml", vm
 
 windgust_cmap, windgust_norm = parse_qml_colormap("wind_gust_color_table.qml", vmin=0, vmax=50)
 
-precip_cmap, precip_norm = parse_qml_colormap("precip_color_table.qml", vmin=0, vmax=50)
+precip_cmap, precip_norm = parse_qml_colormap("precipitation_color_table.qml", vmin=0, vmax=50)
 
 # Dewpoint uses temperature colormap
 dewpoint_cmap = temp_cmap
