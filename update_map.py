@@ -10,6 +10,7 @@ import os
 import glob
 from PIL import Image
 import pandas as pd
+import imageio  # NEW: for MP4 video generation
 
 matplotlib.use('Agg')
 
@@ -41,11 +42,11 @@ origintimes = [elem.text for elem in tree.findall('.//omso:phenomenonTime//gml:b
 latest_origintime = max(origintimes)
 run_time_str = datetime.datetime.strptime(latest_origintime, "%Y-%m-%dT%H:%M:%SZ").strftime("%Y-%m-%d %H:%M UTC")
 
-# --- Step 2: Download with wide bbox ---
+# --- Step 2: Download with wide bbox (removed Precipitation1h) ---
 download_url = (
     "https://opendata.fmi.fi/download?"
     "producer=harmonie_scandinavia_surface&"
-    "param=temperature,Dewpoint,Pressure,CAPE,WindGust,Precipitation1h&"
+    "param=temperature,Dewpoint,Pressure,CAPE,WindGust&"
     "format=netcdf&"
     "bbox=10,53,35,71&"
     "projection=EPSG:4326"
@@ -64,7 +65,6 @@ dewpoint_c = ds['dew_point_temperature_10'] - 273.15
 pressure_hpa = ds['air_pressure_at_sea_level_1'] / 100
 cape = ds['atmosphere_specific_convective_available_potential_energy_59']
 windgust_ms = ds['wind_speed_of_gust_417']
-# precip_mm removed — no longer used
 
 # --- Step 4: Load custom colormaps from QML files ---
 temp_cmap, temp_norm = parse_qml_colormap("temperature_color_table_high.qml", vmin=-40, vmax=50)
@@ -99,7 +99,6 @@ variables = {
     'pressure':    {'var': pressure_hpa, 'cmap': pressure_cmap, 'norm': pressure_norm, 'unit': 'hPa', 'title': 'MSLP (hPa)', 'levels': range(950, 1051, 4)},
     'cape':        {'var': cape, 'cmap': cape_cmap, 'norm': cape_norm, 'unit': 'J/kg', 'title': 'CAPE (J/kg)', 'levels': range(0, 2001, 200)},
     'windgust':    {'var': windgust_ms, 'cmap': windgust_cmap, 'norm': windgust_norm, 'unit': 'm/s', 'title': 'Wind Gust (m/s)', 'levels': range(0, 26, 2)},
-    # 'precip' completely removed
 }
 
 # --- Generate for each view ---
@@ -124,7 +123,6 @@ for view_key, view_conf in views.items():
             min_val = float(data_cropped.min())
             max_val = float(data_cropped.max())
         except:
-            # Fallback to full data if cropping fails
             min_val = float(data.min())
             max_val = float(data.max())
         
@@ -133,7 +131,7 @@ for view_key, view_conf in views.items():
         data.plot.contourf(ax=ax, transform=ccrs.PlateCarree(), cmap=conf['cmap'], norm=conf['norm'], levels=100,
                            cbar_kwargs={'label': conf['unit'], 'shrink': 0.8})
         cl = data.plot.contour(ax=ax, transform=ccrs.PlateCarree(), colors='black', linewidths=0.5, levels=conf['levels'])
-        ax.clabel(cl, inline=True, fontsize=8, fmt="%d")  # No special case for precip anymore
+        ax.clabel(cl, inline=True, fontsize=8, fmt="%d")
         
         ax.coastlines(resolution='10m')
         ax.gridlines(draw_labels=True)
@@ -143,13 +141,12 @@ for view_key, view_conf in views.items():
         plt.savefig(f"{var_key}{suffix}.png", dpi=200, bbox_inches='tight')
         plt.close()
 
-        # Animation — 1h steps until +48h, then 3h steps
-        frames = []
+        # Animation — collect frames first, then save as MP4
+        frame_paths = []
         time_dim = 'time' if 'time' in conf['var'].dims else 'time_h'
         time_values = ds[time_dim].values
         
         for i in range(len(time_values)):
-            # After hour 48, use 3-hour steps
             if i >= 48 and (i - 48) % 3 != 0:
                 continue
 
@@ -173,17 +170,22 @@ for view_key, view_conf in views.items():
             plt.title(f"HARMONIE {conf['title']}\nValid: {valid_str} | +{hour_offset}h from run {run_time_str}")
 
             frame_path = f"frame_{var_key}{suffix}_{i:03d}.png"
-            plt.savefig(frame_path, dpi=95, bbox_inches='tight')
+            plt.savefig(frame_path, dpi=110, bbox_inches='tight')  # Lower DPI for faster saving
             plt.close()
-            frames.append(Image.open(frame_path))
+            frame_paths.append(frame_path)
 
-        frames[0].save(f"{var_key}{suffix}_animation.gif", save_all=True, append_images=frames[1:], duration=500, loop=0)
+        # Save as MP4 video (2 FPS = 500ms per frame)
+        video_path = f"{var_key}{suffix}_animation.mp4"
+        with imageio.get_writer(video_path, fps=2, codec='libx264', pixelformat='yuv420p', quality=8) as writer:
+            for fp in frame_paths:
+                writer.append_data(imageio.imread(fp))
 
-        for f in glob.glob(f"frame_{var_key}{suffix}_*.png"):
-            os.remove(f)
+        # Clean up individual frame files
+        for fp in frame_paths:
+            os.remove(fp)
 
 # --- Cleanup ---
 if os.path.exists("harmonie.nc"):
     os.remove("harmonie.nc")
 
-print("All maps + animations generated with custom colormaps")
+print("All maps + MP4 animations generated with custom colormaps")
