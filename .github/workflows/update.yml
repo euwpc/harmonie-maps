@@ -2,7 +2,7 @@ name: Update HARMONIE Map
 
 on:
   schedule:
-    - cron: '20 */3 * * *'  # Every 3 hours
+    - cron: '20 */3 * * *'  # Every 3 hours at minute 20
   workflow_dispatch:     # Allows manual trigger
 
 jobs:
@@ -19,8 +19,13 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
+          python -m pip install --upgrade pip
+          pip install requests xarray netCDF4 matplotlib cartopy pandas pillow imageio[ffmpeg]
+          # Optional: if you have a requirements.txt, keep it too
+          # pip install -r requirements.txt
+
+      - name: Install system dependencies for cartopy
+        run: |
           sudo apt-get update
           sudo apt-get install -y libproj-dev proj-data proj-bin libgeos-dev
 
