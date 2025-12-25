@@ -10,7 +10,7 @@ import os
 import glob
 from PIL import Image
 import pandas as pd
-import imageio  # NEW: for MP4 video generation
+import imageio  # For MP4 generation
 
 matplotlib.use('Agg')
 
@@ -42,7 +42,7 @@ origintimes = [elem.text for elem in tree.findall('.//omso:phenomenonTime//gml:b
 latest_origintime = max(origintimes)
 run_time_str = datetime.datetime.strptime(latest_origintime, "%Y-%m-%dT%H:%M:%SZ").strftime("%Y-%m-%d %H:%M UTC")
 
-# --- Step 2: Download with wide bbox (removed Precipitation1h) ---
+# --- Step 2: Download with wide bbox (no Precipitation1h) ---
 download_url = (
     "https://opendata.fmi.fi/download?"
     "producer=harmonie_scandinavia_surface&"
@@ -94,11 +94,16 @@ views = {
 }
 
 variables = {
-    'temperature': {'var': temp_c, 'cmap': temp_cmap, 'norm': temp_norm, 'unit': '°C', 'title': '2m Temperature (°C)', 'levels': range(-40, 51, 2)},
-    'dewpoint':    {'var': dewpoint_c, 'cmap': dewpoint_cmap, 'norm': dewpoint_norm, 'unit': '°C', 'title': '2m Dew Point (°C)', 'levels': range(-40, 31, 2)},
-    'pressure':    {'var': pressure_hpa, 'cmap': pressure_cmap, 'norm': pressure_norm, 'unit': 'hPa', 'title': 'MSLP (hPa)', 'levels': range(950, 1051, 4)},
-    'cape':        {'var': cape, 'cmap': cape_cmap, 'norm': cape_norm, 'unit': 'J/kg', 'title': 'CAPE (J/kg)', 'levels': range(0, 2001, 200)},
-    'windgust':    {'var': windgust_ms, 'cmap': windgust_cmap, 'norm': windgust_norm, 'unit': 'm/s', 'title': 'Wind Gust (m/s)', 'levels': range(0, 26, 2)},
+    'temperature': {'var': temp_c, 'cmap': temp_cmap, 'norm': temp_norm, 'unit': '°C', 'title': '2m Temperature (°C)', 
+                    'levels': [-40, -38, -36, -34, -32, -30, -28, -26, -24, -22, -20, -18, -16, -14, -12, -10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50]},
+    'dewpoint':    {'var': dewpoint_c, 'cmap': dewpoint_cmap, 'norm': dewpoint_norm, 'unit': '°C', 'title': '2m Dew Point (°C)', 
+                    'levels': [-40, -35, -30, -25, -20, -15, -10, -5, 0, 5, 10, 15, 20, 25, 30]},
+    'pressure':    {'var': pressure_hpa, 'cmap': pressure_cmap, 'norm': pressure_norm, 'unit': 'hPa', 'title': 'MSLP (hPa)', 
+                    'levels': [890, 900, 910, 915, 920, 925, 929, 933, 938, 942, 946, 950, 954, 958, 962, 965, 968, 972, 974, 976, 978, 980, 982, 984, 986, 988, 990, 992, 994, 996, 998, 1000, 1002, 1004, 1006, 1008, 1010, 1012, 1014, 1016, 1018, 1020, 1022, 1024, 1026, 1028, 1030, 1032, 1034, 1036, 1038, 1040, 1042, 1044, 1046, 1048, 1050, 1052, 1054, 1056, 1058, 1060, 1062, 1064]},
+    'cape':        {'var': cape, 'cmap': cape_cmap, 'norm': cape_norm, 'unit': 'J/kg', 'title': 'CAPE (J/kg)', 
+                    'levels': [0, 20, 40, 100, 200, 300, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400, 2800, 3200, 3600, 4000, 4500, 5000]},
+    'windgust':    {'var': windgust_ms, 'cmap': windgust_cmap, 'norm': windgust_norm, 'unit': 'm/s', 'title': 'Wind Gust (m/s)', 
+                    'levels': [0, 3, 5, 6, 8, 9, 10, 12, 13, 15, 16, 18, 19, 21, 22, 24, 25, 27, 28, 30, 31, 33, 34, 36, 37, 39, 40, 42, 43, 45, 46, 48, 50]},
 }
 
 # --- Generate for each view ---
@@ -110,7 +115,7 @@ for view_key, view_conf in views.items():
         # Analysis map
         data = get_analysis(conf['var'])
         
-        # Crop to current view for accurate min/max (with safe fallback)
+        # Crop to current view for accurate min/max
         lon_min, lon_max, lat_min, lat_max = extent
         try:
             data_cropped = data.sel(
@@ -118,8 +123,6 @@ for view_key, view_conf in views.items():
                 lat=slice(lat_max, lat_min),
                 method='nearest'
             )
-            if data_cropped.size == 0:
-                raise ValueError("Empty crop")
             min_val = float(data_cropped.min())
             max_val = float(data_cropped.max())
         except:
@@ -141,7 +144,7 @@ for view_key, view_conf in views.items():
         plt.savefig(f"{var_key}{suffix}.png", dpi=200, bbox_inches='tight')
         plt.close()
 
-        # Animation — collect frames first, then save as MP4
+        # Animation — collect frames, then save as MP4
         frame_paths = []
         time_dim = 'time' if 'time' in conf['var'].dims else 'time_h'
         time_values = ds[time_dim].values
@@ -170,17 +173,17 @@ for view_key, view_conf in views.items():
             plt.title(f"HARMONIE {conf['title']}\nValid: {valid_str} | +{hour_offset}h from run {run_time_str}")
 
             frame_path = f"frame_{var_key}{suffix}_{i:03d}.png"
-            plt.savefig(frame_path, dpi=95, bbox_inches='tight')  # Lower DPI for faster saving
+            plt.savefig(frame_path, dpi=95, bbox_inches='tight')  # Lower DPI = faster
             plt.close()
             frame_paths.append(frame_path)
 
-        # Save as MP4 video (2 FPS = 500ms per frame)
+        # Save as MP4 (fast + small)
         video_path = f"{var_key}{suffix}_animation.mp4"
         with imageio.get_writer(video_path, fps=2, codec='libx264', pixelformat='yuv420p', quality=8) as writer:
             for fp in frame_paths:
                 writer.append_data(imageio.imread(fp))
 
-        # Clean up individual frame files
+        # Cleanup frames
         for fp in frame_paths:
             os.remove(fp)
 
