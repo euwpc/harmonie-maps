@@ -117,12 +117,12 @@ for view_key, view_conf in views.items():
         
         # Crop for min/max specific to this view
         try:
-            data_cropped = data.sel(lon=slice(lon_min, lon_max), lat=slice(lat_max, lat_min), method='nearest')
-            min_val = float(data_cropped.min())
-            max_val = float(data_cropped.max())
+            data_cropped = data.sel(lon=slice(lon_min, lon_max), lat=slice(lat_min, lat_max), method='nearest')
+            min_val = float(data_cropped.min(skipna=True))
+            max_val = float(data_cropped.max(skipna=True))
         except:
-            min_val = float(data.min())
-            max_val = float(data.max())
+            min_val = float(data.min(skipna=True))
+            max_val = float(data.max(skipna=True))
         
         fig = plt.figure(figsize=(14 if view_key == 'wide' else 12, 10))
         ax = plt.axes(projection=ccrs.PlateCarree())
@@ -158,12 +158,12 @@ for view_key, view_conf in views.items():
 
             # Crop for min/max in this frame and view
             try:
-                slice_cropped = slice_data.sel(lon=slice(lon_min, lon_max), lat=slice(lat_max, lat_min), method='nearest')
-                slice_min = float(slice_cropped.min())
-                slice_max = float(slice_cropped.max())
+                slice_cropped = slice_data.sel(lon=slice(lon_min, lon_max), lat=slice(lat_min, lat_max), method='nearest')
+                slice_min = float(slice_cropped.min(skipna=True))
+                slice_max = float(slice_cropped.max(skipna=True))
             except:
-                slice_min = float(slice_data.min())
-                slice_max = float(slice_data.max())
+                slice_min = float(slice_data.min(skipna=True))
+                slice_max = float(slice_data.max(skipna=True))
 
             slice_data.plot.contourf(ax=ax, transform=ccrs.PlateCarree(), cmap=conf['cmap'], norm=conf['norm'], levels=100)
             cl = slice_data.plot.contour(ax=ax, transform=ccrs.PlateCarree(), colors='black', linewidths=0.5, levels=conf['levels'])
