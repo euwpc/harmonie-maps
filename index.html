@@ -12,13 +12,16 @@
             background: #f0f0f0; 
         }
         h1, h2 { color: #333; }
-        img { 
+        img, video { 
             max-width: 100%; 
             height: auto; 
             border: 2px solid #333; 
             border-radius: 8px; 
             box-shadow: 0 4px 8px rgba(0,0,0,0.2); 
             margin: 20px 0; 
+        }
+        video {
+            background: #000;
         }
         .download-btn {
             display: inline-block;
@@ -33,21 +36,6 @@
         }
         .download-btn:hover { background: #0050a0; }
         .section { margin: 40px 0; }
-        .controls { margin: 20px 0; }
-        .speed-btn {
-            padding: 8px 16px;
-            margin: 0 5px;
-            background: #444;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .speed-btn.active { background: #0066cc; }
-        #anim-gif-container {
-            position: relative;
-            display: inline-block;
-        }
         select { 
             padding: 10px; 
             font-size: 1.1em; 
@@ -77,11 +65,10 @@
         <option value="pressure">MSLP (hPa)</option>
         <option value="cape">CAPE (J/kg)</option>
         <option value="windgust">Wind Gust (m/s)</option>
-        <option value="precip">Precipitation (1h mm)</option>
     </select>
 
     <div class="section">
-        <img id="analysis-map" src="temperature.png?ts=<%= new Date().getTime() %>" alt="Analysis Map">
+        <img id="analysis-map" src="temperature.png" alt="Analysis Map">
         <br>
         <a id="download-analysis" href="temperature.png" download="HARMONIE_temperature.png" class="download-btn">
             Download Analysis Map (PNG)
@@ -95,33 +82,23 @@
         <option value="pressure">MSLP (hPa)</option>
         <option value="cape">CAPE (J/kg)</option>
         <option value="windgust">Wind Gust (m/s)</option>
-        <option value="precip">Precipitation (1h mm)</option>
     </select>
 
     <div class="section">
-        <div id="anim-gif-container">
-            <img id="anim-gif" src="temperature_animation.gif" alt="Forecast Animation">
-        </div>
-        
-        <div class="controls">
-            <button id="play-pause">Pause</button>
-            <span>Speed:</span>
-            <button class="speed-btn" data-speed="0.5">0.5x</button>
-            <button class="speed-btn active" data-speed="1">1x</button>
-            <button class="speed-btn" data-speed="2">2x</button>
-            <button class="speed-btn" data-speed="4">4x</button>
-        </div>
+        <video id="anim-video" controls autoplay loop muted playsinline>
+            <source src="temperature_animation.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
         
         <br>
-        <a id="download-anim" href="temperature_animation.gif" download="HARMONIE_temperature_forecast.gif" class="download-btn">
-            Download Animation (GIF)
+        <a id="download-anim" href="temperature_animation.mp4" download="HARMONIE_temperature_forecast.mp4" class="download-btn">
+            Download Animation (MP4)
         </a>
     </div>
 
     <div class="footer">
         <p>Updated automatically every 3 hours + 10 minutes via GitHub Actions</p>
         <p>Data source: Finnish Meteorological Institute (FMI) open data</p>
-        <p>© tormiinfo.ee</p>
     </div>
 
     <script>
@@ -133,7 +110,7 @@
         const downloadAnalysis = document.getElementById('download-analysis');
 
         const animSelect = document.getElementById('animation-select');
-        const animGif = document.getElementById('anim-gif');
+        const animVideo = document.getElementById('anim-video');
         const downloadAnim = document.getElementById('download-anim');
 
         const baseAnalysisFiles = {
@@ -141,17 +118,15 @@
             'dewpoint': 'dewpoint.png',
             'pressure': 'pressure.png',
             'cape': 'cape.png',
-            'windgust': 'windgust.png',
-            'precip': 'precip.png'
+            'windgust': 'windgust.png'
         };
 
         const baseAnimFiles = {
-            'temperature': 'temperature_animation.gif',
-            'dewpoint': 'dewpoint_animation.gif',
-            'pressure': 'pressure_animation.gif',
-            'cape': 'cape_animation.gif',
-            'windgust': 'windgust_animation.gif',
-            'precip': 'precip_animation.gif'
+            'temperature': 'temperature_animation.mp4',
+            'dewpoint': 'dewpoint_animation.mp4',
+            'pressure': 'pressure_animation.mp4',
+            'cape': 'cape_animation.mp4',
+            'windgust': 'windgust_animation.mp4'
         };
 
         function updateAll() {
@@ -159,13 +134,17 @@
             const animVal = animSelect.value;
             const ts = new Date().getTime();
 
+            // Update analysis map
             analysisMap.src = baseAnalysisFiles[analysisVal].replace('.png', currentSuffix + '.png') + '?ts=' + ts;
             downloadAnalysis.href = baseAnalysisFiles[analysisVal].replace('.png', currentSuffix + '.png');
             downloadAnalysis.download = `HARMONIE_${analysisVal}${currentSuffix}.png`;
 
-            animGif.src = baseAnimFiles[animVal].replace('_animation.gif', currentSuffix + '_animation.gif') + '?ts=' + ts;
-            downloadAnim.href = baseAnimFiles[animVal].replace('_animation.gif', currentSuffix + '_animation.gif');
-            downloadAnim.download = `HARMONIE_${animVal}${currentSuffix}_forecast.gif`;
+            // Update animation video
+            const videoSrc = baseAnimFiles[animVal].replace('_animation.mp4', currentSuffix + '_animation.mp4') + '?ts=' + ts;
+            animVideo.querySelector('source').src = videoSrc;
+            animVideo.load();  // Important: reload the video source
+            downloadAnim.href = baseAnimFiles[animVal].replace('_animation.mp4', currentSuffix + '_animation.mp4');
+            downloadAnim.download = `HARMONIE_${animVal}${currentSuffix}_forecast.mp4`;
         }
 
         viewSelect.addEventListener('change', () => {
@@ -175,46 +154,6 @@
 
         analysisSelect.addEventListener('change', updateAll);
         animSelect.addEventListener('change', updateAll);
-
-        // Pause/Play + Speed
-        const playPauseBtn = document.getElementById('play-pause');
-        const speedBtns = document.querySelectorAll('.speed-btn');
-        let isPaused = false;
-
-        const overlay = document.createElement('div');
-        overlay.style.position = 'absolute';
-        overlay.style.top = '0';
-        overlay.style.left = '0';
-        overlay.style.width = '100%';
-        overlay.style.height = '100%';
-        overlay.style.background = 'transparent';
-        overlay.style.display = 'none';
-        overlay.style.cursor = 'default';
-        document.getElementById('anim-gif-container').appendChild(overlay);
-
-        playPauseBtn.addEventListener('click', () => {
-            if (isPaused) {
-                overlay.style.display = 'none';
-                playPauseBtn.textContent = 'Pause';
-                isPaused = false;
-            } else {
-                overlay.style.display = 'block';
-                playPauseBtn.textContent = 'Play';
-                isPaused = true;
-            }
-        });
-
-        speedBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                speedBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                const speed = btn.dataset.speed;
-                const val = animSelect.value;
-                const baseSrc = baseAnimFiles[val].replace('_animation.gif', currentSuffix + '_animation.gif');
-                animGif.src = baseSrc + '?speed=' + speed + '&ts=' + new Date().getTime();
-                if (isPaused) overlay.style.display = 'block';
-            });
-        });
 
         window.onload = () => {
             updateAll();
