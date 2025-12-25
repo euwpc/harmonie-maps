@@ -3,14 +3,14 @@ name: Update HARMONIE Map
 on:
   schedule:
     # Times in UTC (your desired times in UTC+2 converted)
-    - cron: '40 9 * * *'   # 11:40 EET
-    - cron: '40 12 * * *'  # 14:40 EET
-    - cron: '35 15 * * *'  # 17:35 EET
-    - cron: '35 18 * * *'  # 20:35 EET
-    - cron: '35 21 * * *'  # 23:35 EET
-    - cron: '45 23 * * *'  # 01:45 EET (next day)
-    - cron: '30 3 * * *'   # 05:30 EET
-    - cron: '35 6 * * *'   # 08:35 EET
+    - cron: '50 9 * * *'   # 11:50 EET
+    - cron: '50 12 * * *'  # 14:50 EET
+    - cron: '45 15 * * *'  # 17:45 EET
+    - cron: '45 18 * * *'  # 20:45 EET
+    - cron: '45 21 * * *'  # 23:45 EET
+    - cron: '55 23 * * *'  # 01:55 EET (next day)
+    - cron: '40 3 * * *'   # 05:40 EET
+    - cron: '45 6 * * *'   # 08:45 EET
   workflow_dispatch:       # Allows manual trigger
 
 jobs:
