@@ -70,7 +70,7 @@ temp_cmap, temp_norm = parse_qml_colormap("temperature_color_table_high.qml", vm
 
 cape_cmap, cape_norm = parse_qml_colormap("cape_color_table.qml", vmin=0, vmax=5000)
 
-pressure_cmap, pressure_norm = parse_qml_colormap("pressure_color_table.qml", vmin=890, vmax=1064)
+pressure_cmap, pressure_norm = parse_qml_colormap("pressure_color_table.qml", vmin=870, vmax=1070)
 
 windgust_cmap, windgust_norm = parse_qml_colormap("wind_gust_color_table.qml", vmin=0, vmax=50)
 
@@ -112,19 +112,20 @@ for view_key, view_conf in views.items():
     lon_min, lon_max, lat_min, lat_max = extent
 
     for var_key, conf in variables.items():
-        # Analysis map
+        # Analysis map — reduced size
         data = get_analysis(conf['var'])
         
         # Crop for min/max specific to this view
         try:
             data_cropped = data.sel(lon=slice(lon_min, lon_max), lat=slice(lat_max, lat_min), method='nearest')
-            min_val = float(data_cropped.min())
-            max_val = float(data_cropped.max())
+            min_val = float(data_cropped.min(skipna=True))
+            max_val = float(data_cropped.max(skipna=True))
         except:
-            min_val = float(data.min())
-            max_val = float(data.max())
+            min_val = float(data.min(skipna=True))
+            max_val = float(data.max(skipna=True))
         
-        fig = plt.figure(figsize=(14 if view_key == 'wide' else 12, 10))
+        # Smaller figure for analysis map
+        fig = plt.figure(figsize=(10 if view_key == 'wide' else 9, 8))  # Reduced from 14/12 to 10/9
         ax = plt.axes(projection=ccrs.PlateCarree())
         data.plot.contourf(ax=ax, transform=ccrs.PlateCarree(), cmap=conf['cmap'], norm=conf['norm'], levels=100,
                            cbar_kwargs={'label': conf['unit'], 'shrink': 0.8})
@@ -136,7 +137,7 @@ for view_key, view_conf in views.items():
         ax.set_extent(extent)
         
         plt.title(f"HARMONIE {conf['title']}\nModel run: {run_time_str} | Analysis\nMin: {min_val:.1f} {conf['unit']} | Max: {max_val:.1f} {conf['unit']}")
-        plt.savefig(f"{var_key}{suffix}.png", dpi=200, bbox_inches='tight')
+        plt.savefig(f"{var_key}{suffix}.png", dpi=180, bbox_inches='tight')  # Slightly lower DPI for smaller file
         plt.close()
 
         # Animation — min/max per frame for current view
@@ -144,14 +145,14 @@ for view_key, view_conf in views.items():
         time_dim = 'time' if 'time' in conf['var'].dims else 'time_h'
         time_values = ds[time_dim].values
         
-        fig_width = 12 if view_key == 'wide' else 10
-        fig_height = 8
+        fig_width = 10 if view_key == 'wide' else 9  # Smaller than before (was 12/10)
+        fig_height = 7  # Reduced height
         
         for i in range(len(time_values)):
             if i >= 48 and (i - 48) % 3 != 0:
                 continue
 
-            fig = plt.figure(figsize=(fig_width, fig_height), dpi=115)
+            fig = plt.figure(figsize=(fig_width, fig_height), dpi=105)  # Consistent smaller size
             ax = plt.axes(projection=ccrs.PlateCarree())
             slice_data = conf['var'].isel(**{time_dim: i})
             hour_offset = i
@@ -159,11 +160,11 @@ for view_key, view_conf in views.items():
             # Crop for min/max in this frame and view
             try:
                 slice_cropped = slice_data.sel(lon=slice(lon_min, lon_max), lat=slice(lat_max, lat_min), method='nearest')
-                slice_min = float(slice_cropped.min())
-                slice_max = float(slice_cropped.max())
+                slice_min = float(slice_cropped.min(skipna=True))
+                slice_max = float(slice_cropped.max(skipna=True))
             except:
-                slice_min = float(slice_data.min())
-                slice_max = float(slice_data.max())
+                slice_min = float(slice_data.min(skipna=True))
+                slice_max = float(slice_data.max(skipna=True))
 
             slice_data.plot.contourf(ax=ax, transform=ccrs.PlateCarree(), cmap=conf['cmap'], norm=conf['norm'], levels=100)
             cl = slice_data.plot.contour(ax=ax, transform=ccrs.PlateCarree(), colors='black', linewidths=0.5, levels=conf['levels'])
