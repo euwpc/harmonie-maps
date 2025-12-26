@@ -70,7 +70,8 @@ temp_cmap, temp_norm = parse_qml_colormap("temperature_color_table_high.qml", vm
 
 cape_cmap, cape_norm = parse_qml_colormap("cape_color_table.qml", vmin=0, vmax=5000)
 
-pressure_cmap, pressure_norm = parse_qml_colormap("pressure_color_table.qml", vmin=1070, vmax=870)  # Wider range for better color mapping
+pressure_cmap, pressure_norm = parse_qml_colormap("pressure_color_table.qml", vmin=870, vmax=1070)
+pressure_cmap = pressure_cmap.reversed()# Wider range for better color mapping
 
 windgust_cmap, windgust_norm = parse_qml_colormap("wind_gust_color_table.qml", vmin=0, vmax=50)
 
