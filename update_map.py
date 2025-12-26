@@ -180,7 +180,7 @@ for view_key, view_conf in views.items():
             plt.title(f"HARMONIE {conf['title']}\nValid: {valid_str} | +{hour_offset}h from run {run_time_str}\nMin: {slice_min:.1f} {conf['unit']} | Max: {slice_max:.1f} {conf['unit']}")
 
             frame_path = f"frame_{var_key}{suffix}_{i:03d}.png"
-            plt.savefig(frame_path, dpi=130, bbox_inches='tight', pad_inches=0.1, facecolor='white')
+            plt.savefig(frame_path, dpi=120, bbox_inches='tight', pad_inches=0.1, facecolor='white')
             plt.close()
             frame_paths.append(frame_path)
 
