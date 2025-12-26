@@ -102,7 +102,7 @@ variables = {
     'cape':        {'var': cape, 'cmap': cape_cmap, 'norm': cape_norm, 'unit': 'J/kg', 'title': 'CAPE (J/kg)', 
                     'levels': [0, 20, 40, 100, 200, 300, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400, 2800, 3200, 3600, 4000, 4500, 5000]},
     'windgust':    {'var': windgust_ms, 'cmap': windgust_cmap, 'norm': windgust_norm, 'unit': 'm/s', 'title': 'Wind Gust (m/s)', 
-                    'levels': [0, 3, 5, 6, 8, 9, 10, 12, 13, 15, 16, 18, 19, 21, 22, 24, 25, 27, 28, 30, 31, 33, 34, 36, 37, 39, 40, 42, 43, 45, 46, 48, 50]},
+                    'levels': [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]},  # Reduced density for windgust
 }
 
 # --- Generate for each view ---
@@ -129,8 +129,14 @@ for view_key, view_conf in views.items():
         ax = plt.axes(projection=ccrs.PlateCarree())
         data.plot.contourf(ax=ax, transform=ccrs.PlateCarree(), cmap=conf['cmap'], norm=conf['norm'], levels=100,
                            cbar_kwargs={'label': conf['unit'], 'shrink': 0.8})
-        cl = data.plot.contour(ax=ax, transform=ccrs.PlateCarree(), colors='black', linewidths=0.5, levels=conf['levels'])
-        ax.clabel(cl, inline=True, fontsize=8, fmt="%d")
+        
+        # Special contour treatment for windgust only
+        if var_key == 'windgust':
+            cl = data.plot.contour(ax=ax, transform=ccrs.PlateCarree(), colors='white', linewidths=0.35, levels=conf['levels'], alpha=0.7)
+            ax.clabel(cl, inline=True, fontsize=6, fmt="%d", colors='black', inline_spacing=3)
+        else:
+            cl = data.plot.contour(ax=ax, transform=ccrs.PlateCarree(), colors='black', linewidths=0.5, levels=conf['levels'])
+            ax.clabel(cl, inline=True, fontsize=8, fmt="%d")
         
         ax.coastlines(resolution='10m')
         ax.gridlines(draw_labels=True)
@@ -167,13 +173,14 @@ for view_key, view_conf in views.items():
                 slice_max = float(slice_data.max(skipna=True))
 
             slice_data.plot.contourf(ax=ax, transform=ccrs.PlateCarree(), cmap=conf['cmap'], norm=conf['norm'], levels=100)
+            
+            # Special contour treatment for windgust only in animation
             if var_key == 'windgust':
-    # Thinner white lines, less clutter, smaller labels
-    cl = data.plot.contour(ax=ax, transform=ccrs.PlateCarree(), colors='white', linewidths=0.35, levels=conf['levels'], alpha=0.7)
-    ax.clabel(cl, inline=True, fontsize=6, fmt="%d", colors='black', inline_spacing=3)
-else:
-            cl = slice_data.plot.contour(ax=ax, transform=ccrs.PlateCarree(), colors='black', linewidths=0.5, levels=conf['levels'])
-            ax.clabel(cl, inline=True, fontsize=8, fmt="%d")
+                cl = slice_data.plot.contour(ax=ax, transform=ccrs.PlateCarree(), colors='white', linewidths=0.35, levels=conf['levels'], alpha=0.7)
+                ax.clabel(cl, inline=True, fontsize=6, fmt="%d", colors='black', inline_spacing=3)
+            else:
+                cl = slice_data.plot.contour(ax=ax, transform=ccrs.PlateCarree(), colors='black', linewidths=0.5, levels=conf['levels'])
+                ax.clabel(cl, inline=True, fontsize=8, fmt="%d")
 
             ax.coastlines(resolution='10m')
             ax.gridlines(draw_labels=True)
