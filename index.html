@@ -6,86 +6,110 @@
     <title>HARMONIE Forecast Maps</title>
     <style>
         body { 
-            font-family: Arial, sans-serif; 
+            font-family: 'Segoe UI', Arial, sans-serif; 
             text-align: center; 
-            margin: 20px; 
-            background: #f0f0f0; 
+            margin: 0;
+            padding: 0;
+            background: #f5f7fa; 
+            color: #333;
+            line-height: 1.6;
         }
-        h1, h2 { color: #333; }
+        h1, h2 { 
+            color: #2c3e50; 
+            margin: 30px 0 20px;
+        }
         img, video { 
             max-width: 100%; 
             height: auto; 
-            border: 2px solid #333; 
-            border-radius: 8px; 
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2); 
-            margin: 20px 0; 
+            border: 1px solid #ddd; 
+            border-radius: 10px; 
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1); 
+            margin: 25px 0; 
+            background: #fff;
         }
         video {
             background: #000;
         }
         .download-btn {
             display: inline-block;
-            margin: 10px;
-            padding: 12px 24px;
-            background: #0066cc;
+            margin: 12px;
+            padding: 12px 28px;
+            background: #2980b9;
             color: white;
             text-decoration: none;
-            font-weight: bold;
+            font-weight: 600;
             border-radius: 6px;
-            transition: background 0.3s;
+            transition: background 0.3s ease;
         }
-        .download-btn:hover { background: #0050a0; }
-        .section { margin: 40px 0; }
+        .download-btn:hover { 
+            background: #3498db; 
+        }
+        .section { 
+            margin: 50px 0; 
+            padding: 0 20px;
+        }
         select { 
-            padding: 10px; 
+            padding: 12px 16px; 
             font-size: 1.1em; 
             margin: 20px; 
-            border-radius: 6px; 
+            border-radius: 8px; 
             background: white;
             border: 1px solid #ccc;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
         }
         .footer { 
-            margin: 50px 0; 
-            color: #666; 
-            font-size: 0.9em; 
+            margin: 80px 0 40px; 
+            color: #7f8c8d; 
+            font-size: 0.95em; 
         }
 
-        /* Warning banner styles */
+        /* Professional Warning Banner */
         #warning-banner {
-            background-color: #ff4444;
-            color: white;
-            padding: 15px;
-            font-size: 1.1em;
-            font-weight: bold;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: #ffffff;
+            padding: 20px 40px;
+            font-size: 1.15em;
+            font-weight: 500;
             text-align: center;
             position: relative;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+            border-bottom: 4px solid #c0392b;
         }
-        #warning-banner a {
-            color: #ffff99;
-            text-decoration: underline;
+        #warning-banner strong {
+            font-weight: 700;
+        }
+        #warning-banner p {
+            margin: 8px 0;
         }
         #close-warning {
             position: absolute;
-            right: 15px;
+            right: 20px;
             top: 50%;
             transform: translateY(-50%);
-            background: none;
+            background: rgba(255,255,255,0.2);
             border: none;
             color: white;
-            font-size: 1.5em;
+            font-size: 1.8em;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
             cursor: pointer;
+            transition: background 0.3s;
+        }
+        #close-warning:hover {
+            background: rgba(255,255,255,0.4);
         }
     </style>
 </head>
 <body>
-    <!-- Warning Banner - shown every time -->
+
+    <!-- Professional Warning Banner -->
     <div id="warning-banner">
-        ⚠️ IMPORTANT NOTICE ⚠️<br>
-        Development for this site has been paused until January 2026.<br>
-        The site will be taken offline in early January 2026 and will return around mid-January due to ongoing bugs and update issues.<br>
-        Thank you for your understanding!
-        <button id="close-warning" aria-label="Close warning">×</button>
+        <strong>Service Notice</strong>
+        <p>Development for Harmonie Forecast has been temporarily suspended until January 2026.</p>
+        <p>The platform will be taken offline in early January 2026 for maintenance and will return approximately mid-January 2026 due to identified technical issues.</p>
+        <p>We appreciate your understanding and look forward to resuming full service soon.</p>
+        <button id="close-warning" aria-label="Close notice">×</button>
     </div>
 
     <h1>Select View</h1>
@@ -133,8 +157,8 @@
     </div>
 
     <div class="footer">
-        <p>Updated automatically every 3 hours + 10 minutes via GitHub Actions</p>
         <p>Data source: Finnish Meteorological Institute (FMI) open data</p>
+        <p>© Harmonie Forecast</p>
     </div>
 
     <script>
@@ -170,12 +194,10 @@
             const animVal = animSelect.value;
             const ts = new Date().getTime();
 
-            // Update analysis map
             analysisMap.src = baseAnalysisFiles[analysisVal].replace('.png', currentSuffix + '.png') + '?ts=' + ts;
             downloadAnalysis.href = baseAnalysisFiles[analysisVal].replace('.png', currentSuffix + '.png');
             downloadAnalysis.download = `HARMONIE_${analysisVal}${currentSuffix}.png`;
 
-            // Update animation video
             const videoSrc = baseAnimFiles[animVal].replace('_animation.mp4', currentSuffix + '_animation.mp4') + '?ts=' + ts;
             animVideo.querySelector('source').src = videoSrc;
             animVideo.load();
@@ -195,7 +217,7 @@
             updateAll();
         };
 
-        // Close warning banner (doesn't persist after close)
+        // Close button for the warning banner
         document.getElementById('close-warning').addEventListener('click', () => {
             document.getElementById('warning-banner').style.display = 'none';
         });
