@@ -49,9 +49,45 @@
             color: #666; 
             font-size: 0.9em; 
         }
+
+        /* Warning banner styles */
+        #warning-banner {
+            background-color: #ff4444;
+            color: white;
+            padding: 15px;
+            font-size: 1.1em;
+            font-weight: bold;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        #warning-banner a {
+            color: #ffff99;
+            text-decoration: underline;
+        }
+        #close-warning {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5em;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
+    <!-- Warning Banner - shown every time -->
+    <div id="warning-banner">
+        ⚠️ IMPORTANT NOTICE ⚠️<br>
+        Development and automatic updates for this site have been paused until January 2026.<br>
+        The site will be taken offline in early January 2026 and will return around mid-January due to ongoing bugs and update issues.<br>
+        Thank you for your understanding!
+        <button id="close-warning" aria-label="Close warning">×</button>
+    </div>
+
     <h1>Select View</h1>
     <select id="view-select">
         <option value="">Focused View (Southern Finland & Baltics)</option>
@@ -97,7 +133,7 @@
     </div>
 
     <div class="footer">
-        <p>Updated automatically every 3 hours via GitHub Actions. Sometimes, updates can be delayed due to GitHub runner availability</p>
+        <p>Updated automatically every 3 hours + 10 minutes via GitHub Actions</p>
         <p>Data source: Finnish Meteorological Institute (FMI) open data</p>
     </div>
 
@@ -142,7 +178,7 @@
             // Update animation video
             const videoSrc = baseAnimFiles[animVal].replace('_animation.mp4', currentSuffix + '_animation.mp4') + '?ts=' + ts;
             animVideo.querySelector('source').src = videoSrc;
-            animVideo.load();  // Important: reload the video source
+            animVideo.load();
             downloadAnim.href = baseAnimFiles[animVal].replace('_animation.mp4', currentSuffix + '_animation.mp4');
             downloadAnim.download = `HARMONIE_${animVal}${currentSuffix}_forecast.mp4`;
         }
@@ -158,6 +194,11 @@
         window.onload = () => {
             updateAll();
         };
+
+        // Close warning banner (doesn't persist after close)
+        document.getElementById('close-warning').addEventListener('click', () => {
+            document.getElementById('warning-banner').style.display = 'none';
+        });
     </script>
 </body>
 </html>
